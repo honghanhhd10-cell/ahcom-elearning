@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AHCOM E-Learning - Hệ thống đào tạo nội bộ</title>
+  
+  <!-- Global JS Error Interceptor to display errors in dynamic UI -->
+  <script>
+    window.addEventListener('error', function(e) {
+      const consoleDiv = document.getElementById('debug-error-console');
+      if (consoleDiv) {
+        consoleDiv.style.display = 'block';
+        const errorLine = document.createElement('div');
+        errorLine.style.marginBottom = '6px';
+        errorLine.style.lineHeight = '1.4';
+        errorLine.innerHTML = `<strong>Lỗi:</strong> ${e.message} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${e.filename.split('/').pop()}:${e.lineno}:${e.colno}</span>`;
+        consoleDiv.appendChild(errorLine);
+      }
+    });
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Toast Notifications Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Navbar (Hiển thị khi đã đăng nhập) -->
+  <nav id="main-navbar" class="navbar" style="display: none;">
+    <div class="navbar-container">
+      <a href="#" class="navbar-logo" id="nav-logo-btn" title="Quay về trang chủ" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-decoration: none;">
+        <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo" style="height: 35px; width: auto; display: block; object-fit: contain;">
+        <span style="font-size: 13px; font-weight: 800; color: var(--primary); letter-spacing: 0.2px; text-transform: uppercase; margin-top: 2px; font-family: var(--font-family);">Đào tạo AHCOM</span>
+      </a>
+      
+      <div class="navbar-menu">
+        <!-- Menu cho Học viên -->
+        <a href="#" class="nav-link active" id="nav-courses-link" style="display: none;">
+          <i class="fa-solid fa-book-open"></i> Khóa học của tôi
+        </a>
+        
+        <!-- Menu cho Admin -->
+        <a href="#" class="nav-link" id="nav-admin-link" style="display: none;">
+          <i class="fa-solid fa-chart-line"></i> Thống kê Quản trị
+        </a>
+        
+        <!-- Thông tin người dùng -->
+        <div class="user-info-section">
+          <div class="user-badge" id="btn-user-badge-profile" style="cursor: pointer;" title="Chỉnh sửa thông tin cá nhân">
+            <span class="user-name" id="display-user-name">Đang tải...</span>
+            <span class="user-role" id="display-user-role">Học viên</span>
+          </div>
+          <button class="btn btn-secondary" id="btn-nav-profile" style="padding: 6px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white;">
+            <i class="fa-solid fa-user-gear"></i> Tài khoản
+          </button>
+          <button class="logout-btn" id="btn-logout">
+            <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main class="main-content">
+
+    <!-- ================= VIEW 1: DANG NHAP (LOGIN) ================= -->
+    <section id="view-login" class="view-panel auth-wrapper active">
+      <div class="auth-card">
+        <div class="auth-header">
+          <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo" style="display: block; margin: 0 auto 20px auto; height: 55px; width: auto; object-fit: contain;">
+          <h2>AHCOM E-Learning</h2>
+          <p>Đăng nhập cổng đào tạo nhân sự</p>
+        </div>
+        <form id="form-login">
+          <div class="form-group">
+            <label for="login-identity">Email hoặc Mã nhân viên</label>
+            <input type="text" id="login-identity" class="form-input" placeholder="Ví dụ: AHCOM002 hoặc quyet.nv@ahcom.vn" required>
+          </div>
+          <div class="form-group">
+            <label for="login-password">Mật khẩu</label>
+            <input type="password" id="login-password" class="form-input" placeholder="Nhập mật khẩu" required>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-right-to-bracket"></i> Đăng nhập
+            </button>
+          </div>
+        </form>
+        <div class="auth-footer">
+          Chưa có tài khoản? <button class="btn-link" id="go-to-register-btn">Đăng ký ngay</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 2: DANG KY (REGISTER) ================= -->
+    <section id="view-register" class="view-panel auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header">
+          <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo" style="display: block; margin: 0 auto 20px auto; height: 55px; width: auto; object-fit: contain;">
+          <h2>Đăng ký Tài khoản</h2>
+          <p>Hệ thống tự động liên kết với mã nhân sự</p>
+        </div>
+        <form id="form-register">
+          <div class="form-group">
+            <label for="reg-fullname">Họ và tên</label>
+            <input type="text" id="reg-fullname" class="form-input" placeholder="Nhập họ và tên đầy đủ" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-empid">Mã nhân viên (HR cấp)</label>
+            <input type="text" id="reg-empid" class="form-input" placeholder="Ví dụ: AHCOM002" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-email">Địa chỉ Email</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="Ví dụ: email@ahcom.vn" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-password">Mật khẩu</label>
+            <input type="password" id="reg-password" class="form-input" placeholder="Nhập mật khẩu từ 6 ký tự" required>
+          </div>
+          <div class="form-group">
+            <label for="reg-department">Phòng ban làm việc</label>
+            <select id="reg-department" class="form-input" required>
+              <option value="" disabled selected>Chọn phòng ban của bạn</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="reg-job-level">Chức vụ</label>
+            <select id="reg-job-level" class="form-input" required>
+              <option value="Staff" selected>Nhân viên</option>
+              <option value="Manager">Quản lý</option>
+            </select>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+              <i class="fa-solid fa-user-plus"></i> Đăng ký tài khoản
+            </button>
+          </div>
+        </form>
+        <div class="auth-footer">
+          Đã có tài khoản? <button class="btn-link" id="go-to-login-btn">Đăng nhập</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3: STUDENT DASHBOARD ================= -->
+    <section id="view-student-dashboard" class="view-panel">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h2 id="student-welcome-title">Xin chào, Thành viên AHCOM!</h2>
+          <p>Hãy chọn một khóa học bên dưới để nâng cao năng lực chuyên môn của mình.</p>
+        </div>
+      </div>
+
+      <!-- Bộ lọc danh mục -->
+      <div class="category-filter" id="course-category-filters">
+        <button class="filter-btn active" data-category="all">Tất cả</button>
+        <button class="filter-btn" data-category="Sales">Kỹ năng Bán hàng</button>
+        <button class="filter-btn" data-category="DISC">Mô hình DISC</button>
+        <button class="filter-btn" data-category="HR">Hội nhập & Quy chế</button>
+      </div>
+
+      <!-- Danh sách khóa học dạng lưới -->
+      <div class="course-grid" id="courses-container">
+        <!-- Render động qua JS -->
+      </div>
+    </section>
+
+    <!-- ================= VIEW 4: LESSON VIEWER (HOC TAP) ================= -->
+    <section id="view-course-viewer" class="view-panel">
+      <button class="btn-back" id="btn-back-to-dashboard">
+        <i class="fa-solid fa-arrow-left"></i> Quay lại Danh sách Khóa học
+      </button>
+
+      <div class="viewer-layout">
+        <!-- Cột trái: Trình phát Video / Trình diễn Slide -->
+        <div class="viewer-main">
+          <div class="viewer-header">
+            <h2 id="viewer-course-title" class="viewer-title">Tên khóa học đang học</h2>
+          </div>
+
+          <div class="content-wrapper" id="learning-media-container">
+            <!-- Nút phát và xem nội dung sẽ chèn động tại đây (Video HTML5 hoặc Slide Viewer) -->
+          </div>
+        </div>
+
+        <!-- Cột phải: Tiến độ học tập & Làm bài kiểm tra -->
+        <div class="viewer-sidebar">
+          <div class="sidebar-section">
+            <h3>Chi tiết bài học</h3>
+            <ul class="meta-info-list">
+              <li class="meta-info-item">
+                <span>Thể loại:</span>
+                <span id="viewer-meta-category">Sales</span>
+              </li>
+              <li class="meta-info-item">
+                <span>Dạng tài liệu:</span>
+                <span id="viewer-meta-type">Video</span>
+              </li>
+              <li class="meta-info-item">
+                <span>Thời gian đã học:</span>
+                <span id="viewer-meta-watchtime">0 phút</span>
+              </li>
+              <li class="meta-info-item">
+                <span>Trạng thái:</span>
+                <span id="viewer-meta-status">Chưa hoàn thành</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>Bài kiểm tra (Quiz)</h3>
+            <div class="quiz-launch-card">
+              <p>Bạn cần tích lũy thời gian học trên hệ thống và nắm bắt nội dung trước khi thực hiện bài thi trắc nghiệm.</p>
+              <button class="btn btn-primary" id="btn-start-quiz" style="width: 100%;">
+                <i class="fa-solid fa-pen-clip"></i> Bắt đầu thi trắc nghiệm
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 5: QUIZ INTERACTIVE (THI TRAC NGHIEM) ================= -->
+    <section id="view-quiz-panel" class="view-panel">
+      <div class="quiz-view-panel">
+        <div class="quiz-header">
+          <h2 id="quiz-course-title">Bài kiểm tra trắc nghiệm</h2>
+          <p style="color: var(--text-muted); margin-top: 4px;">Trả lời đúng từ 70% số câu hỏi trở lên để được chứng nhận "Đạt".</p>
+        </div>
+
+        <!-- Các câu hỏi trắc nghiệm sẽ render tại đây -->
+        <form id="form-quiz-questions">
+          <div id="quiz-questions-list"></div>
+          
+          <div style="margin-top: 32px; display: flex; gap: 16px; justify-content: flex-end;">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-quiz">Hủy bỏ</button>
+            <button type="submit" class="btn btn-success">
+              <i class="fa-solid fa-circle-check"></i> Nộp bài thi
+            </button>
+          </div>
+        </form>
+
+        <!-- Kết quả thi hiển thị đè hoặc chèn bên dưới sau khi submit -->
+        <div id="quiz-result-container" style="display: none; margin-top: 40px; border-top: 2px dashed var(--border-color); padding-top: 32px;">
+          <!-- Kết quả render động tại đây -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= VIEW 6: ADMIN PORTAL (HR STATISTICS) ================= -->
+    <section id="view-admin-dashboard" class="view-panel">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h2>Thống kê Đào tạo Nhân sự AHCOM</h2>
+          <p>Báo cáo tiến độ học tập và kết quả thi trắc nghiệm chi tiết của nhân viên.</p>
+        </div>
+      </div>
+
+      <!-- Admin sub-navigation tabs -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" id="btn-tab-analytics">
+          <i class="fa-solid fa-users-viewfinder"></i> Báo cáo Đào tạo
+        </button>
+        <button class="admin-tab-btn" id="btn-tab-courses">
+          <i class="fa-solid fa-cubes"></i> Cấu hình Khóa học & Quiz
+        </button>
+        <button class="admin-tab-btn" id="btn-tab-whitelist">
+          <i class="fa-solid fa-id-card"></i> Quản lý Mã Nhân sự
+        </button>
+        <button class="admin-tab-btn" id="btn-tab-departments">
+          <i class="fa-solid fa-building-user"></i> Quản lý Phòng ban
+        </button>
+      </div>
+
+      <!-- TAB CONTENT 1: ANALYTICS REPORT -->
+      <div class="admin-tab-content active" id="tab-content-analytics">
+        <!-- Thống kê tổng quan -->
+        <div class="admin-stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div class="stat-info">
+              <h4>Học viên đăng ký</h4>
+              <p id="stat-total-students">0</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div class="stat-info">
+              <h4>Khóa học trên hệ thống</h4>
+              <p id="stat-total-courses">0</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background-color: var(--success-light); color: var(--success);"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="stat-info">
+              <h4>Bài học hoàn thành</h4>
+              <p id="stat-completed-lessons">0</p>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon" style="background-color: #E0F7FA; color: #00838F;"><i class="fa-solid fa-trophy"></i></div>
+            <div class="stat-info">
+              <h4>Lượt thi ĐẠT (Passed)</h4>
+              <p id="stat-passed-quizzes">0</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bảng báo cáo chi tiết học viên -->
+        <div class="admin-table-card">
+          <div class="table-toolbar">
+            <div class="toolbar-filters">
+              <!-- Tìm kiếm theo tên hoặc mã -->
+              <input type="text" id="admin-search-input" class="form-input table-search-input" placeholder="Tìm tên hoặc mã NV...">
+              
+              <!-- Lọc theo phòng ban -->
+              <select id="admin-dept-filter" class="table-filter-select">
+                <option value="all">Tất cả Phòng ban</option>
+              </select>
+            </div>
+            
+            <button class="btn btn-primary" id="btn-export-csv">
+              <i class="fa-solid fa-file-arrow-down"></i> Xuất Báo cáo (CSV)
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="analytics-table">
+              <thead>
+                <tr>
+                  <th>Họ và tên</th>
+                  <th>Mã nhân viên</th>
+                  <th>Phòng ban</th>
+                  <th>Bài học đã hoàn thành</th>
+                  <th>Tổng thời gian học</th>
+                  <th>Lịch sử trắc nghiệm</th>
+                  <th style="text-align: right; padding-right: 32px;">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="admin-analytics-table-body">
+                <!-- Render động danh sách nhân sự tại đây -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 2: COURSE MANAGEMENT -->
+      <div class="admin-tab-content" id="tab-content-courses">
+        <div class="admin-table-card">
+          <div class="table-toolbar">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase;">Quản lý nội dung đào tạo</h3>
+            <button class="btn btn-primary" id="btn-add-new-course">
+              <i class="fa-solid fa-plus"></i> Thêm Khóa học mới
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="analytics-table">
+              <thead>
+                <tr>
+                  <th>Tên khóa học</th>
+                  <th>Chuyên mục</th>
+                  <th>Loại tài liệu</th>
+                  <th>Số câu hỏi Quiz</th>
+                  <th style="text-align: right; padding-right: 32px;">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="admin-courses-table-body">
+                <!-- Render động danh sách khóa học tại đây -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 3: EMPLOYEE WHITELIST MANAGEMENT -->
+      <div class="admin-tab-content" id="tab-content-whitelist">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 32px; align-items: start;">
+          <!-- Left side: Add new employee ID form -->
+          <div class="admin-table-card" style="padding: 24px;">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin-bottom: 16px;">Thêm mã nhân sự</h3>
+            <form id="form-add-whitelist">
+              <div class="form-group">
+                <label for="whitelist-empid-input">Mã nhân viên mới</label>
+                <input type="text" id="whitelist-empid-input" class="form-input" placeholder="Ví dụ: AHCOM011" required style="text-transform: uppercase;">
+                <small style="color: var(--text-muted); display: block; margin-top: 6px;">Mã nhân viên nhập vào sẽ được chuẩn hóa thành chữ in hoa.</small>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 16px;">
+                <i class="fa-solid fa-user-plus"></i> Thêm vào Whitelist
+              </button>
+            </form>
+
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 16px; text-align: center;">
+              <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Hoặc nhập danh sách hàng loạt từ file (.xlsx, .txt, .csv)</p>
+              <input type="file" id="whitelist-file-input" accept=".txt,.csv,.xlsx,.xls" style="display: none;">
+              <button class="btn btn-secondary" id="btn-import-whitelist-file" style="width: 100%;">
+                <i class="fa-solid fa-file-import"></i> Nhập từ Tệp (Excel/TXT/CSV)
+              </button>
+            </div>
+          </div>
+
+          <!-- Right side: Whitelist table -->
+          <div class="admin-table-card">
+            <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+              <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin: 0;">Danh sách mã được phép đăng ký</h3>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn btn-primary" id="btn-delete-selected-whitelist" style="padding: 6px 12px; font-size: 12px; display: none; background-color: var(--danger);">
+                  <i class="fa-solid fa-trash-can"></i> Xóa mục chọn
+                </button>
+                <button class="btn btn-secondary" id="btn-clear-all-whitelist" style="padding: 6px 12px; font-size: 12px; background-color: #ef4444; color: white;">
+                  <i class="fa-solid fa-eraser"></i> Xóa tất cả
+                </button>
+                <span id="whitelist-count-badge" class="badge-status passed" style="font-size: 12px;">0 mã</span>
+              </div>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th class="col-chk" style="width: 50px; text-align: center; padding: 10px;">
+                      <input type="checkbox" id="chk-select-all-whitelist" style="cursor: pointer; transform: scale(1.15);">
+                    </th>
+                    <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
+                    <th class="col-empid">Mã nhân viên hợp lệ</th>
+                    <th class="col-action" style="width: 110px; text-align: right; padding-right: 24px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-whitelist-table-body">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 4: DEPARTMENT MANAGEMENT -->
+      <div class="admin-tab-content" id="tab-content-departments">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 32px; align-items: start;">
+          <!-- Left side: Add new department form -->
+          <div class="admin-table-card" style="padding: 24px;">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin-bottom: 16px;">Thêm phòng ban</h3>
+            <form id="form-add-department">
+              <div class="form-group">
+                <label for="department-name-input">Tên phòng ban mới</label>
+                <input type="text" id="department-name-input" class="form-input" placeholder="Ví dụ: Phòng Nghiên cứu và Phát triển" required>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-folder-plus"></i> Thêm phòng ban
+              </button>
+            </form>
+          </div>
+
+          <!-- Right side: Departments table -->
+          <div class="admin-table-card">
+            <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin: 0;">Danh sách phòng ban</h3>
+              <span id="departments-count-badge" class="badge-status passed" style="font-size: 12px;">0 phòng ban</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
+                    <th>Tên phòng ban</th>
+                    <th class="col-action" style="width: 160px; text-align: right; padding-right: 24px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-departments-table-body">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= MODAL: COURSE EDITOR (POPUP SOAN THAO) ================= -->
+  <div class="modal-overlay" id="modal-course-editor">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="course-modal-title">Cấu hình Khóa học</h3>
+        <button class="modal-close-btn" id="btn-close-course-modal">&times;</button>
+      </div>
+      <form id="form-course-editor">
+        <div class="modal-body">
+          <input type="hidden" id="editor-course-id">
+          
+          <!-- Thông tin cơ bản -->
+          <div class="form-group">
+            <label for="editor-title">Tên khóa học</label>
+            <input type="text" id="editor-title" class="form-input" placeholder="Nhập tên khóa học tại AHCOM" required>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label for="editor-category">Chuyên mục</label>
+              <select id="editor-category" class="form-input" required>
+                <option value="Sales">Sales (Kinh doanh)</option>
+                <option value="DISC">DISC (Mô hình tính cách)</option>
+                <option value="HR">HR (Hội nhập & Quy chế)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editor-content-type">Loại tài liệu</label>
+              <select id="editor-content-type" class="form-input" required>
+                <option value="Video">Video bài giảng (Native MP4)</option>
+                <option value="Slide">Tài liệu trình chiếu (Slides)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editor-target-group">Đối tượng học viên</label>
+              <select id="editor-target-group" class="form-input" required>
+                <option value="All">Tất cả nhân sự</option>
+                <option value="Staff">Chỉ Nhân viên</option>
+                <option value="Manager">Chỉ Quản lý</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ảnh đại diện khóa học -->
+          <div class="form-group" style="margin-top: 16px;">
+            <label>Ảnh đại diện khóa học</label>
+            <div style="display: flex; gap: 16px; align-items: center;">
+              <div id="editor-thumbnail-preview" style="width: 120px; aspect-ratio: 16 / 9; background-color: #EDF2F7; border-radius: var(--radius-sm); border: 1.5px dashed var(--border-color); display: flex; align-items: center; justify-content: center; overflow: hidden; background-size: cover; background-position: center; position: relative;">
+                <span id="editor-thumbnail-placeholder" style="font-size: 11px; color: var(--text-muted); text-align: center; padding: 4px;">Chưa có ảnh</span>
+              </div>
+              <div style="flex: 1;">
+                <input type="file" id="editor-thumbnail-input" accept="image/*" style="display: none;">
+                <button type="button" class="btn btn-secondary" id="btn-upload-thumbnail" style="padding: 8px 14px; font-size: 13px; margin-bottom: 8px;">
+                  <i class="fa-solid fa-image"></i> Tải ảnh đại diện lên
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-remove-thumbnail" style="padding: 8px 14px; font-size: 13px; margin-bottom: 8px; color: var(--danger); display: none;">
+                  <i class="fa-solid fa-trash-can"></i> Xóa ảnh
+                </button>
+                <div style="font-size: 12px; color: var(--text-muted);">
+                  Hỗ trợ PNG, JPG, GIF. Nếu không tải ảnh lên, hệ thống sẽ sử dụng ảnh mặc định.
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Cấu hình nguồn Slide (Chỉ hiện khi chọn loại tài liệu là Slide) -->
+          <div class="form-group" id="editor-group-slide-source" style="display: none;">
+            <label for="editor-slide-source">Nguồn tài liệu Slide</label>
+            <select id="editor-slide-source" class="form-input">
+              <option value="manual" selected>Soạn thảo nội dung thủ công</option>
+              <option value="link">Nhập liên kết tài liệu ngoài (Google Slides/PDF/Docs/Web Link)</option>
+            </select>
+          </div>
+
+          <!-- Khối nhập Video URL (Hiện nếu chọn Video) -->
+          <div class="form-group" id="editor-group-video-url" style="display: none;">
+            <label for="editor-video-url">Đường dẫn Video (Hỗ trợ Direct MP4 hoặc Link chia sẻ Google Drive)</label>
+            <input type="url" id="editor-video-url" class="form-input" placeholder="Nhập đường dẫn Video, ví dụ: https://drive.google.com/file/d/.../view">
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 13px; color: var(--text-muted);">Hoặc</span>
+              <input type="file" id="editor-video-file-input" accept="video/mp4,video/webm" style="display: none;">
+              <button type="button" class="btn btn-secondary" id="btn-upload-video" style="padding: 6px 12px; font-size: 12px;">
+                <i class="fa-solid fa-file-video"></i> Chọn file từ máy tính
+              </button>
+              <span id="editor-video-file-name" style="font-size: 13px; font-weight: 600; color: var(--success); display: none;"></span>
+              <button type="button" class="btn btn-secondary" id="btn-remove-video-file" style="padding: 4px 8px; font-size: 11px; color: var(--danger); display: none; border-color: var(--danger); background: none;">
+                Xóa file
+              </button>
+            </div>
+          </div>
+
+          <!-- Khối nhập Slide URL (Hiện nếu chọn Slide nguồn link) -->
+          <div class="form-group" id="editor-group-slide-url" style="display: none;">
+            <label for="editor-slide-url">Đường dẫn tài liệu Slide (Hỗ trợ Google Slides, PDF, Google Docs hoặc Link Web)</label>
+            <input type="url" id="editor-slide-url" class="form-input" placeholder="Nhập đường dẫn tài liệu Slide, ví dụ: https://docs.google.com/presentation/d/.../edit">
+          </div>
+
+          <!-- Khối nhập Slide deck (Ẩn nếu chọn Video) -->
+          <div id="editor-group-slides" style="display: none;">
+            <div class="editor-section-header">
+              <h4>Nội dung Slides trình chiếu</h4>
+              <div style="display: flex; gap: 8px;">
+                <input type="file" id="editor-slides-file-input" accept=".txt,.csv" style="display: none;">
+                <button type="button" class="btn btn-secondary" id="btn-editor-import-slides" style="padding: 8px 12px; font-size: 13px;">
+                  <i class="fa-solid fa-file-import"></i> Nhập Slide từ Tệp
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-editor-add-slide" style="padding: 8px 12px; font-size: 13px;">
+                  <i class="fa-solid fa-plus"></i> Thêm trang Slide
+                </button>
+              </div>
+            </div>
+            <div id="editor-slides-list">
+              <!-- Render động danh sách nhập slide qua JS -->
+            </div>
+          </div>
+
+          <!-- Khối nhập câu hỏi trắc nghiệm -->
+          <div>
+            <div class="editor-section-header">
+              <h4>Bộ câu hỏi trắc nghiệm (Quiz)</h4>
+              <button type="button" class="btn btn-secondary" id="btn-editor-add-question">
+                <i class="fa-solid fa-plus"></i> Thêm câu hỏi
+              </button>
+            </div>
+            <div id="editor-questions-list">
+              <!-- Render động câu hỏi qua JS -->
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-course-modal">Hủy bỏ</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu khóa học
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: ADMIN USER EDITOR (POPUP SUA THANH VIEN) ================= -->
+  <div class="modal-overlay" id="modal-user-editor">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>Chỉnh sửa Thành viên</h3>
+        <button class="modal-close-btn" id="btn-close-user-modal">&times;</button>
+      </div>
+      <form id="form-user-editor">
+        <div class="modal-body">
+          <input type="hidden" id="editor-user-id">
+          <div class="form-group">
+            <label for="editor-user-fullname">Họ và tên</label>
+            <input type="text" id="editor-user-fullname" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editor-user-empid">Mã nhân viên</label>
+            <input type="text" id="editor-user-empid" class="form-input" required style="text-transform: uppercase;">
+          </div>
+          <div class="form-group">
+            <label for="editor-user-email">Địa chỉ Email</label>
+            <input type="email" id="editor-user-email" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="editor-user-dept">Phòng ban làm việc</label>
+            <select id="editor-user-dept" class="form-input" required>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editor-user-joblevel">Chức vụ</label>
+            <select id="editor-user-joblevel" class="form-input" required>
+              <option value="Staff">Nhân viên</option>
+              <option value="Manager">Quản lý</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="editor-user-password">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
+            <input type="password" id="editor-user-password" class="form-input" placeholder="Nhập mật khẩu mới">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-user-modal">Hủy bỏ</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STUDENT PROFILE EDITOR (POPUP HO SO CA NHAN) ================= -->
+  <div class="modal-overlay" id="modal-profile-editor">
+    <div class="modal-container" style="max-width: 500px;">
+      <div class="modal-header">
+        <h3>Thông tin Tài khoản cá nhân</h3>
+        <button class="modal-close-btn" id="btn-close-profile-modal">&times;</button>
+      </div>
+      <form id="form-profile-editor">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="profile-fullname">Họ và tên</label>
+            <input type="text" id="profile-fullname" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="profile-empid">Mã nhân viên (Liên kết Whitelist - Không thể sửa)</label>
+            <input type="text" id="profile-empid" class="form-input" disabled style="background-color: #e9ecef; cursor: not-allowed; text-transform: uppercase;">
+          </div>
+          <div class="form-group">
+            <label for="profile-email">Địa chỉ Email</label>
+            <input type="email" id="profile-email" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label for="profile-dept">Phòng ban làm việc</label>
+            <select id="profile-dept" class="form-input" required>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="profile-joblevel">Chức vụ</label>
+            <select id="profile-joblevel" class="form-input" required>
+              <option value="Staff">Nhân viên</option>
+              <option value="Manager">Quản lý</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="profile-password">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
+            <input type="password" id="profile-password" class="form-input" placeholder="Nhập mật khẩu mới">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-profile-modal">Hủy bỏ</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu hồ sơ
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- DEBUG ERROR CONSOLE -->
+  <div id="debug-error-console" style="display: none; position: fixed; bottom: 10px; left: 10px; right: 10px; background: rgba(0,0,0,0.85); color: #ff5555; padding: 15px; border-radius: 8px; font-family: monospace; z-index: 10000; max-height: 200px; overflow-y: auto; font-size: 12px; border: 2px solid red; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+    <div style="display: flex; justify-content: space-between; margin-bottom: 8px; border-bottom: 1px solid #ff5555; padding-bottom: 4px;">
+      <strong>[AHCOM SYSTEM ERROR CONSOLE]</strong>
+      <button onclick="this.parentElement.parentElement.style.display='none'" style="background: red; color: white; border: none; padding: 2px 6px; cursor: pointer; font-size: 10px; font-weight: bold; border-radius: 3px;">ĐÓNG</button>
+    </div>
+  </div>
+
+  <!-- SheetJS Library for parsing Excel spreadsheets (.xlsx/.xls) in browser -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Relational Local Database Layer -->
+  <script src="db.js?v=3"></script>
+  
+  <!-- Interactive Client-side App Core -->
+  <script src="app.js?v=3"></script>
+
+</body>
+</html>
