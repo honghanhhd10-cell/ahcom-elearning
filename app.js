@@ -263,12 +263,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- AUTHENTICATION ACTIONS ---
   
   // Submit Login
-  el.formLogin.addEventListener('submit', (e) => {
+  el.formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
     const identity = el.loginIdentity.value;
     const password = el.loginPassword.value;
 
-    const result = window.ahcomDB.loginUser(identity, password);
+    const result = await window.ahcomDB.loginUser(identity, password);
 
     if (result.success) {
       state.currentUser = result.user;
@@ -277,10 +277,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Routing logic based on Role
       if (result.user.Role === 'Admin') {
-        renderAdminDashboard();
+        await renderAdminDashboard();
         showView('view-admin-dashboard');
       } else {
-        renderStudentDashboard();
+        await renderStudentDashboard();
         showView('view-student-dashboard');
       }
 
@@ -292,7 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Submit Registration
-    el.formRegister.addEventListener('submit', (e) => {
+  el.formRegister.addEventListener('submit', async (e) => {
     e.preventDefault();
     const fullName = el.regFullname.value;
     const empId = el.regEmpId.value;
@@ -306,7 +306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const result = window.ahcomDB.registerUser(fullName, empId, email, password, department, jobLevel);
+    const result = await window.ahcomDB.registerUser(fullName, empId, email, password, department, jobLevel);
 
     if (result.success) {
       showToast('Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.', 'success');
@@ -368,13 +368,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- STUDENT DASHBOARD RENDERING ---
-  function renderStudentDashboard() {
+  async function renderStudentDashboard() {
     // Set welcome text
     document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Department})</span>`;
     
-    const courses = window.ahcomDB.getCourses();
-    const progressList = window.ahcomDB.getUserProgress(state.currentUser.UserID);
-    const quizResults = window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
+    const courses = await window.ahcomDB.getCourses();
+    const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
+    const quizResults = await window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
 
     // Get active filter
     const activeFilterBtn = el.courseCategoryFilters.querySelector('.filter-btn.active');
@@ -533,7 +533,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- COURSE VIEWER (STUDY SCREEN) ---
-  function loadCourseViewer(course) {
+  async function loadCourseViewer(course) {
     // RBAC Security Guard
     if (state.currentUser && state.currentUser.Role !== 'Admin') {
       const userJobLevel = state.currentUser.JobLevel || 'Staff';
@@ -556,7 +556,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.viewerMetaType.textContent = course.ContentType === 'Video' ? 'Video Bài giảng' : 'Tài liệu Slide';
 
     // Retrieve initial progress
-    const progressList = window.ahcomDB.getUserProgress(state.currentUser.UserID);
+    const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
     const progress = progressList.find(p => p.CourseID === course.CourseID);
     const initialSeconds = progress ? progress.WatchTimeSeconds : 0;
     
@@ -892,8 +892,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Back to dashboard
-  el.btnBackToDashboard.addEventListener('click', () => {
-    renderStudentDashboard();
+  el.btnBackToDashboard.addEventListener('click', async () => {
+    await renderStudentDashboard();
     showView('view-student-dashboard');
   });
 
@@ -940,7 +940,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Submit Quiz Action
-  el.formQuiz.addEventListener('submit', (e) => {
+  el.formQuiz.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.activeCourse) return;
 
@@ -983,7 +983,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusVietnamese = isPassed ? 'Đạt' : 'Chưa đạt';
 
     // Save to Relational DB
-    window.ahcomDB.saveQuizResult(
+    await window.ahcomDB.saveQuizResult(
       state.currentUser.UserID,
       state.activeCourse.CourseID,
       correctCount,
@@ -1050,9 +1050,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- ADMIN PORTAL PANEL RENDERING ---
-  function renderAdminDashboard() {
-    const analytics = window.ahcomDB.getAdminAnalytics();
-    const courses = window.ahcomDB.getCourses();
+  async function renderAdminDashboard() {
+    const analytics = await window.ahcomDB.getAdminAnalytics();
+    const courses = await window.ahcomDB.getCourses();
     
     // Update summary counters
     el.statTotalStudents.textContent = analytics.length;
@@ -1076,12 +1076,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     el.statPassedQuizzes.textContent = totalPassedQuizzes;
 
-    renderAdminTable();
+    await renderAdminTable();
   }
 
   // Draw admin table with filters applied
-  function renderAdminTable() {
-    const analytics = window.ahcomDB.getAdminAnalytics();
+  async function renderAdminTable() {
+    const analytics = await window.ahcomDB.getAdminAnalytics();
     
     // Read current filter state
     const searchTerm = el.adminSearchInput.value.toLowerCase().trim();
@@ -1163,8 +1163,8 @@ document.addEventListener('DOMContentLoaded', () => {
   el.adminDeptFilter.addEventListener('change', renderAdminTable);
 
   // --- EXPORT TO CSV CONTROLLER ---
-  el.btnExportCSV.addEventListener('click', () => {
-    const analytics = window.ahcomDB.getAdminAnalytics();
+  el.btnExportCSV.addEventListener('click', async () => {
+    const analytics = await window.ahcomDB.getAdminAnalytics();
     
     // Apply current UI filters to export only what is viewed (or export all - exporting filtered matches is more professional!)
     const searchTerm = el.adminSearchInput.value.toLowerCase().trim();
@@ -1275,8 +1275,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Draw admin courses list table
-  function renderAdminCoursesTable() {
-    const courses = window.ahcomDB.getCourses();
+  async function renderAdminCoursesTable() {
+    const courses = await window.ahcomDB.getCourses();
     el.adminCoursesTableBody.innerHTML = '';
 
     courses.forEach(course => {
@@ -1305,12 +1305,12 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // Bind delete click
-      tr.querySelector('.btn-delete-course').addEventListener('click', () => {
+      tr.querySelector('.btn-delete-course').addEventListener('click', async () => {
         if (confirm(`Bạn có chắc chắn muốn xóa khóa học "${course.Title}" không? Hành động này sẽ xóa toàn bộ tiến trình học và điểm thi liên quan.`)) {
-          window.ahcomDB.deleteCourse(course.CourseID);
+          await window.ahcomDB.deleteCourse(course.CourseID);
           showToast(`Đã xóa khóa học "${course.Title}" thành công!`, 'warning');
-          renderAdminDashboard(); // refreshes stats counters
-          renderAdminCoursesTable(); // refreshes course list table
+          await renderAdminDashboard(); // refreshes stats counters
+          await renderAdminCoursesTable(); // refreshes course list table
         }
       });
 
@@ -1876,7 +1876,7 @@ document.addEventListener('DOMContentLoaded', () => {
     courseData.QuizQuestions = quizQuestions;
 
     // Save to simulated database
-    const saved = window.ahcomDB.saveCourse(courseData);
+    const saved = await window.ahcomDB.saveCourse(courseData);
 
     // Save video file to IndexedDB if a new file is pending
     if (contentType === 'Video' && state.pendingVideoFile) {
@@ -1891,16 +1891,16 @@ document.addEventListener('DOMContentLoaded', () => {
     showToast(`Đã lưu khóa học "${saved.Title}" thành công!`, 'success');
     
     // Refresh panels
-    renderAdminDashboard();
-    renderAdminCoursesTable();
+    await renderAdminDashboard();
+    await renderAdminCoursesTable();
     closeCourseEditorModal();
   });
 
   // --- ADMIN EMPLOYEE WHITELIST MANAGER LOGIC ---
 
   // Draw Whitelist table
-  function renderWhitelistTable() {
-    const validIDs = window.ahcomDB.getValidEmployeeIDs();
+  async function renderWhitelistTable() {
+    const validIDs = await window.ahcomDB.getValidEmployeeIDs();
     el.whitelistCountBadge.textContent = `${validIDs.length} mã`;
     el.adminWhitelistTableBody.innerHTML = '';
 
@@ -1927,12 +1927,12 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       // Bind delete click
-      tr.querySelector('.btn-delete-whitelist').addEventListener('click', () => {
+      tr.querySelector('.btn-delete-whitelist').addEventListener('click', async () => {
         if (confirm(`Bạn có chắc chắn muốn xóa mã nhân viên "${item.EmployeeID}" khỏi Whitelist đăng ký?`)) {
-          const result = window.ahcomDB.deleteValidEmployeeID(item.EmployeeID);
+          const result = await window.ahcomDB.deleteValidEmployeeID(item.EmployeeID);
           if (result.success) {
             showToast(result.message, 'success');
-            renderWhitelistTable();
+            await renderWhitelistTable();
           } else {
             showToast(result.message, 'danger');
           }
@@ -1980,7 +1980,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Bind Bulk Delete Selected button click
-  document.addEventListener('click', (e) => {
+  document.addEventListener('click', async (e) => {
     const btnDeleteSelected = e.target.closest('#btn-delete-selected-whitelist');
     if (btnDeleteSelected) {
       e.preventDefault();
@@ -1990,10 +1990,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (selectedIds.length === 0) return;
 
       if (confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} mã nhân viên đã chọn khỏi danh sách Whitelist?`)) {
-        const result = window.ahcomDB.deleteValidEmployeeIDs(selectedIds);
+        const result = await window.ahcomDB.deleteValidEmployeeIDs(selectedIds);
         if (result.success) {
           showToast(result.message, 'success');
-          renderWhitelistTable();
+          await renderWhitelistTable();
         } else {
           showToast(result.message, 'danger');
         }
@@ -2004,17 +2004,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnClearAll = e.target.closest('#btn-clear-all-whitelist');
     if (btnClearAll) {
       e.preventDefault();
-      const validIDs = window.ahcomDB.getValidEmployeeIDs();
+      const validIDs = await window.ahcomDB.getValidEmployeeIDs();
       if (validIDs.length === 0) {
         showToast('Danh sách mã hiện tại đang trống.', 'warning');
         return;
       }
       
       if (confirm('CẢNH BÁO: Bạn có chắc chắn muốn xóa TOÀN BỘ danh sách mã nhân viên Whitelist? Hành động này không thể hoàn tác.')) {
-        const result = window.ahcomDB.clearAllValidEmployeeIDs();
+        const result = await window.ahcomDB.clearAllValidEmployeeIDs();
         if (result.success) {
           showToast(result.message, 'success');
-          renderWhitelistTable();
+          await renderWhitelistTable();
         } else {
           showToast(result.message, 'danger');
         }
@@ -2023,17 +2023,17 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Handle Add Whitelist submit
-  el.formAddWhitelist.addEventListener('submit', (e) => {
+  el.formAddWhitelist.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newEmpId = el.whitelistEmpIdInput.value.trim();
     if (!newEmpId) return;
 
-    const result = window.ahcomDB.addValidEmployeeID(newEmpId);
+    const result = await window.ahcomDB.addValidEmployeeID(newEmpId);
 
     if (result.success) {
       showToast(result.message, 'success');
       el.whitelistEmpIdInput.value = '';
-      renderWhitelistTable();
+      await renderWhitelistTable();
     } else {
       showToast(result.message, 'danger');
     }
@@ -2059,7 +2059,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         try {
           const data = new Uint8Array(event.target.result);
           const workbook = XLSX.read(data, { type: 'array' });
@@ -2092,10 +2092,10 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
-          const result = window.ahcomDB.importValidEmployeeIDs(codes);
+          const result = await window.ahcomDB.importValidEmployeeIDs(codes);
           if (result.success) {
             showToast(result.message, 'success');
-            renderWhitelistTable();
+            await renderWhitelistTable();
           } else {
             showToast(result.message, 'danger');
           }
@@ -2114,7 +2114,7 @@ document.addEventListener('DOMContentLoaded', () => {
       reader.readAsArrayBuffer(file);
     } else {
       // Handle standard TXT or CSV
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const text = event.target.result;
         
         // Split codes by lines, commas, semicolons, or tabs
@@ -2129,11 +2129,11 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const result = window.ahcomDB.importValidEmployeeIDs(codes);
+        const result = await window.ahcomDB.importValidEmployeeIDs(codes);
         
         if (result.success) {
           showToast(result.message, 'success');
-          renderWhitelistTable();
+          await renderWhitelistTable();
         } else {
           showToast(result.message, 'danger');
         }
@@ -2177,7 +2177,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el.btnCloseUserModal.addEventListener('click', closeUserEditorModal);
   el.btnCancelUserModal.addEventListener('click', closeUserEditorModal);
 
-  el.formUserEditor.addEventListener('submit', (e) => {
+  el.formUserEditor.addEventListener('submit', async (e) => {
     e.preventDefault();
     const userId = el.editorUserId.value;
     const fullName = el.editorUserFullname.value.trim();
@@ -2203,11 +2203,11 @@ document.addEventListener('DOMContentLoaded', () => {
       updatedData.Password = password;
     }
 
-    const result = window.ahcomDB.updateUserProfile(userId, updatedData);
+    const result = await window.ahcomDB.updateUserProfile(userId, updatedData);
     if (result.success) {
       showToast('Cập nhật thông tin thành viên thành công!', 'success');
       closeUserEditorModal();
-      renderAdminDashboard(); // Refresh reporting table
+      await renderAdminDashboard(); // Refresh reporting table
     } else {
       showToast(result.message, 'danger');
     }
@@ -2215,11 +2215,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
   // --- STUDENT PROFILE EDITOR CONTROLLER ---
-  function openProfileEditorModal() {
+  async function openProfileEditorModal() {
     if (!state.currentUser) return;
     
     // Fetch latest user details from DB to make sure we edit fresh data
-    const users = JSON.parse(localStorage.getItem('ahcom_users')) || [];
+    const users = await window.ahcomDB.getUsers();
     const user = users.find(u => u.UserID === state.currentUser.UserID);
     if (!user) return;
 
@@ -2237,9 +2237,9 @@ document.addEventListener('DOMContentLoaded', () => {
     el.modalProfileEditor.classList.remove('active');
   }
 
-  const triggerProfileModal = (e) => {
+  const triggerProfileModal = async (e) => {
     if (e) e.preventDefault();
-    openProfileEditorModal();
+    await openProfileEditorModal();
   };
 
   if (el.btnNavProfile) el.btnNavProfile.addEventListener('click', triggerProfileModal);
@@ -2248,7 +2248,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el.btnCloseProfileModal.addEventListener('click', closeProfileEditorModal);
   el.btnCancelProfileModal.addEventListener('click', closeProfileEditorModal);
 
-  el.formProfileEditor.addEventListener('submit', (e) => {
+  el.formProfileEditor.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.currentUser) return;
 
@@ -2273,7 +2273,7 @@ document.addEventListener('DOMContentLoaded', () => {
       updatedData.Password = password;
     }
 
-    const result = window.ahcomDB.updateUserProfile(state.currentUser.UserID, updatedData);
+    const result = await window.ahcomDB.updateUserProfile(state.currentUser.UserID, updatedData);
     if (result.success) {
       showToast('Cập nhật hồ sơ tài khoản cá nhân thành công!', 'success');
       closeProfileEditorModal();
@@ -2285,9 +2285,9 @@ document.addEventListener('DOMContentLoaded', () => {
       // Refresh navbar and current view
       showView(state.currentView);
       if (state.currentView === 'view-student-dashboard') {
-        renderStudentDashboard();
+        await renderStudentDashboard();
       } else if (state.currentView === 'view-admin-dashboard') {
-        renderAdminDashboard();
+        await renderAdminDashboard();
       }
     } else {
       showToast(result.message, 'danger');
@@ -2298,8 +2298,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- ADMIN DEPARTMENT MANAGER LOGIC ---
 
   // Dynamic department dropdown population
-  function renderDepartmentDropdowns() {
-    const depts = window.ahcomDB.getDepartments();
+  async function renderDepartmentDropdowns() {
+    const depts = await window.ahcomDB.getDepartments();
 
     // 1. Register Form Dropdown
     if (el.regDept) {
@@ -2359,8 +2359,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Draw Departments tab table
-  function renderAdminDepartmentsTable() {
-    const depts = window.ahcomDB.getDepartments();
+  async function renderAdminDepartmentsTable() {
+    const depts = await window.ahcomDB.getDepartments();
     el.departmentsCountBadge.textContent = `${depts.length} phòng ban`;
     el.adminDepartmentsTableBody.innerHTML = '';
 
@@ -2380,7 +2380,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       // Bind Edit Click
-      tr.querySelector('.btn-edit-dept').addEventListener('click', () => {
+      tr.querySelector('.btn-edit-dept').addEventListener('click', async () => {
         const newName = prompt(`Nhập tên mới cho phòng ban "${dept}":`, dept);
         if (newName === null) return; // Cancelled
         
@@ -2390,15 +2390,15 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const result = window.ahcomDB.updateDepartment(dept, cleanName);
+        const result = await window.ahcomDB.updateDepartment(dept, cleanName);
         if (result.success) {
           showToast(result.message, 'success');
           // Refresh list of depts in DB and UI dropdowns
-          renderDepartmentDropdowns();
-          renderAdminDepartmentsTable();
+          await renderDepartmentDropdowns();
+          await renderAdminDepartmentsTable();
           // Update admin table if rendering analytics
           if (state.currentView === 'view-admin-dashboard') {
-            renderAdminDashboard();
+            await renderAdminDashboard();
           }
         } else {
           showToast(result.message, 'danger');
@@ -2406,17 +2406,17 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       // Bind Delete Click
-      tr.querySelector('.btn-delete-dept').addEventListener('click', () => {
+      tr.querySelector('.btn-delete-dept').addEventListener('click', async () => {
         if (confirm(`Bạn có chắc chắn muốn xóa phòng ban "${dept}"?`)) {
-          const result = window.ahcomDB.deleteDepartment(dept);
+          const result = await window.ahcomDB.deleteDepartment(dept);
           if (result.success) {
             showToast(result.message, 'success');
             // Refresh list of depts in DB and UI dropdowns
-            renderDepartmentDropdowns();
-            renderAdminDepartmentsTable();
+            await renderDepartmentDropdowns();
+            await renderAdminDepartmentsTable();
             // Update admin table if rendering analytics
             if (state.currentView === 'view-admin-dashboard') {
-              renderAdminDashboard();
+              await renderAdminDashboard();
             }
           } else {
             showToast(result.message, 'danger');
@@ -2429,25 +2429,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Handle Add Department submit
-  el.formAddDepartment.addEventListener('submit', (e) => {
+  el.formAddDepartment.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newDeptName = el.departmentNameInput.value.trim();
     if (!newDeptName) return;
 
-    const result = window.ahcomDB.addDepartment(newDeptName);
+    const result = await window.ahcomDB.addDepartment(newDeptName);
 
     if (result.success) {
       showToast(result.message, 'success');
       el.departmentNameInput.value = '';
-      renderDepartmentDropdowns();
-      renderAdminDepartmentsTable();
+      await renderDepartmentDropdowns();
+      await renderAdminDepartmentsTable();
     } else {
       showToast(result.message, 'danger');
     }
   });
 
   // Initial load of dropdowns
-  renderDepartmentDropdowns();
+  renderDepartmentDropdowns().catch(err => console.error(err));
 
 
   // --- AUTO SESSION LOGIN CHECK ---
@@ -2456,10 +2456,10 @@ document.addEventListener('DOMContentLoaded', () => {
     state.currentUser = JSON.parse(activeSession);
     
     if (state.currentUser.Role === 'Admin') {
-      renderAdminDashboard();
+      renderAdminDashboard().catch(err => console.error(err));
       showView('view-admin-dashboard');
     } else {
-      renderStudentDashboard();
+      renderStudentDashboard().catch(err => console.error(err));
       showView('view-student-dashboard');
     }
   } else {
