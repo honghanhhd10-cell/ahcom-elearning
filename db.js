@@ -6,12 +6,13 @@
 const SUPABASE_URL = 'https://vhbokhazwnmfpzijbljc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZoYm9raGF6d25tZnB6aWpibGpjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2NzA5MTAsImV4cCI6MjA5OTI0NjkxMH0.f2rOeY_ElRIOkkjuEftuUsiDRPTiLdKIgrgAPIbNvRk';
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Rename local connection variable to supabaseClient to avoid collision with CDN global window.supabase
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const db = {
   // --- DEPARTMENTS CRUD ---
   async getDepartments() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_departments')
       .select('name')
       .order('id', { ascending: true });
@@ -25,7 +26,7 @@ const db = {
   async addDepartment(deptName) {
     const cleanName = deptName.trim();
     if (!cleanName) return { success: false, message: 'Tên phòng ban không được để trống.' };
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_departments')
       .insert({ name: cleanName });
     if (error) {
@@ -41,14 +42,14 @@ const db = {
     if (!cleanNew) return { success: false, message: 'Tên phòng ban mới không được để trống.' };
     
     // Update department name
-    const { error: deptError } = await supabase
+    const { error: deptError } = await supabaseClient
       .from('ahcom_departments')
       .update({ name: cleanNew })
       .eq('name', cleanOld);
     if (deptError) return { success: false, message: deptError.message };
 
     // Update users belonging to this department
-    const { error: userError } = await supabase
+    const { error: userError } = await supabaseClient
       .from('ahcom_users')
       .update({ department: cleanNew })
       .eq('department', cleanOld);
@@ -60,7 +61,7 @@ const db = {
     const cleanName = deptName.trim();
     
     // Check if there are users currently belonging to this department
-    const { data: users, error: checkError } = await supabase
+    const { data: users, error: checkError } = await supabaseClient
       .from('ahcom_users')
       .select('user_id')
       .eq('department', cleanName)
@@ -69,7 +70,7 @@ const db = {
       return { success: false, message: `Không thể xóa phòng ban "${cleanName}" do đang có nhân viên thuộc phòng ban này. Vui lòng chuyển các nhân viên sang phòng ban khác trước.` };
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_departments')
       .delete()
       .eq('name', cleanName);
@@ -79,7 +80,7 @@ const db = {
 
   // --- WHITELIST EMPLOYEE IDS ---
   async getValidEmployeeIDs() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_whitelist')
       .select('employee_id');
     if (error) {
@@ -93,7 +94,7 @@ const db = {
     const cleanId = newEmpId.trim().toUpperCase();
     if (!cleanId) return { success: false, message: 'Mã nhân sự không được để trống.' };
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .insert({ employee_id: cleanId });
     if (error) {
@@ -105,7 +106,7 @@ const db = {
 
   async addValidEmployeeIDs(idsArray) {
     const rows = idsArray.map(id => ({ employee_id: id.trim().toUpperCase() }));
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .upsert(rows, { onConflict: 'employee_id' });
     if (error) return { success: false, message: error.message };
@@ -117,7 +118,7 @@ const db = {
   },
 
   async deleteValidEmployeeID(employeeId) {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .delete()
       .eq('employee_id', employeeId.trim().toUpperCase());
@@ -127,7 +128,7 @@ const db = {
 
   async deleteValidEmployeeIDs(selectedIds) {
     const cleanIds = selectedIds.map(id => id.trim().toUpperCase());
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .delete()
       .in('employee_id', cleanIds);
@@ -136,7 +137,7 @@ const db = {
   },
 
   async clearValidEmployeeIDs() {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .delete()
       .neq('employee_id', '');
@@ -150,7 +151,7 @@ const db = {
 
   // --- COURSES ---
   async getCourses() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_courses')
       .select('*')
       .order('created_at', { ascending: true });
@@ -187,7 +188,7 @@ const db = {
       quiz_questions: courseData.QuizQuestions || []
     };
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_courses')
       .upsert(row);
     if (error) {
@@ -198,7 +199,7 @@ const db = {
   },
 
   async deleteCourse(courseId) {
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_courses')
       .delete()
       .eq('course_id', courseId);
@@ -212,7 +213,7 @@ const db = {
 
   // --- USERS & AUTHENTICATION ---
   async getUsers() {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_users')
       .select('*');
     if (error) {
@@ -235,7 +236,7 @@ const db = {
     const cleanEmpId = empId.trim().toUpperCase();
     
     // 1. Verify employee_id exists in whitelist
-    const { data: whitelistData, error: wlError } = await supabase
+    const { data: whitelistData, error: wlError } = await supabaseClient
       .from('ahcom_whitelist')
       .select('employee_id')
       .eq('employee_id', cleanEmpId);
@@ -245,7 +246,7 @@ const db = {
     }
 
     // 2. Check if employee_id already registered
-    const { data: existingUser, error: checkError } = await supabase
+    const { data: existingUser, error: checkError } = await supabaseClient
       .from('ahcom_users')
       .select('user_id')
       .eq('employee_id', cleanEmpId);
@@ -254,7 +255,7 @@ const db = {
     }
 
     // 3. Check if email already registered
-    const { data: existingEmail, error: checkEmailError } = await supabase
+    const { data: existingEmail, error: checkEmailError } = await supabaseClient
       .from('ahcom_users')
       .select('user_id')
       .eq('email', email.trim().toLowerCase());
@@ -275,7 +276,7 @@ const db = {
       role: 'Student'
     };
 
-    const { error: regError } = await supabase
+    const { error: regError } = await supabaseClient
       .from('ahcom_users')
       .insert(row);
     if (regError) return { success: false, message: regError.message };
@@ -301,8 +302,8 @@ const db = {
 
     // Find user by email or employee_id
     const query = cleanIdentity.includes('@') 
-      ? supabase.from('ahcom_users').select('*').eq('email', cleanIdentity.toLowerCase())
-      : supabase.from('ahcom_users').select('*').eq('employee_id', cleanIdentity.toUpperCase());
+      ? supabaseClient.from('ahcom_users').select('*').eq('email', cleanIdentity.toLowerCase())
+      : supabaseClient.from('ahcom_users').select('*').eq('employee_id', cleanIdentity.toUpperCase());
 
     const { data, error } = await query;
     if (error || !data || data.length === 0) {
@@ -340,7 +341,7 @@ const db = {
       row.password = updatedData.Password;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_users')
       .update(row)
       .eq('user_id', userId)
@@ -366,7 +367,7 @@ const db = {
 
   // --- LEARNING PROGRESS ---
   async getUserProgress(userId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_progress')
       .select('*')
       .eq('user_id', userId);
@@ -393,7 +394,7 @@ const db = {
       updated_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_progress')
       .upsert(row, { onConflict: 'user_id,course_id' });
     if (error) console.error("Lỗi updateWatchProgress: ", error);
@@ -408,7 +409,7 @@ const db = {
 
   // --- QUIZ RESULTS ---
   async getUserQuizResults(userId) {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseClient
       .from('ahcom_quiz_results')
       .select('*')
       .eq('user_id', userId);
@@ -436,7 +437,7 @@ const db = {
       status: status
     };
 
-    const { error } = await supabase
+    const { error } = await supabaseClient
       .from('ahcom_quiz_results')
       .insert(row);
     if (error) console.error("Lỗi saveQuizResult: ", error);
@@ -455,7 +456,7 @@ const db = {
     const users = await this.getUsers();
     const courses = await this.getCourses();
     
-    const { data: progressData, error: pError } = await supabase
+    const { data: progressData, error: pError } = await supabaseClient
       .from('ahcom_progress')
       .select('*');
     const progressList = pError ? [] : progressData.map(p => ({
@@ -465,7 +466,7 @@ const db = {
       IsCompleted: p.is_completed
     }));
 
-    const { data: quizData, error: qError } = await supabase
+    const { data: quizData, error: qError } = await supabaseClient
       .from('ahcom_quiz_results')
       .select('*');
     const quizResults = qError ? [] : quizData.map(r => ({
