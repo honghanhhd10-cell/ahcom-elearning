@@ -14,7 +14,19 @@
         const errorLine = document.createElement('div');
         errorLine.style.marginBottom = '6px';
         errorLine.style.lineHeight = '1.4';
-        errorLine.innerHTML = `<strong>Lỗi:</strong> ${e.message} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${e.filename.split('/').pop()}:${e.lineno}:${e.colno}</span>`;
+        errorLine.innerHTML = `<strong>Lỗi:</strong> ${e.message} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${e.filename ? e.filename.split('/').pop() : 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}</span>`;
+        consoleDiv.appendChild(errorLine);
+      }
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      const consoleDiv = document.getElementById('debug-error-console');
+      if (consoleDiv) {
+        consoleDiv.style.display = 'block';
+        const errorLine = document.createElement('div');
+        errorLine.style.marginBottom = '6px';
+        errorLine.style.lineHeight = '1.4';
+        const msg = e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason);
+        errorLine.innerHTML = `<strong>Lỗi kết nối / Async:</strong> ${msg}`;
         consoleDiv.appendChild(errorLine);
       }
     });
