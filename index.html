@@ -8,25 +8,43 @@
   <!-- Global JS Error Interceptor to display errors in dynamic UI -->
   <script>
     window.addEventListener('error', function(e) {
+      // Ignore in-app browser injections (Zalo, Messenger) and browser extensions errors
+      const msg = e.message || '';
+      const filename = e.filename || '';
+      if (
+        msg.includes('zaloJSV2') || 
+        msg.includes('zalo') || 
+        msg.includes('zBrowser') ||
+        filename.includes('zalo') || 
+        filename.includes('chrome-extension') ||
+        filename.includes('ext')
+      ) {
+        return;
+      }
+
       const consoleDiv = document.getElementById('debug-error-console');
       if (consoleDiv) {
         consoleDiv.style.display = 'block';
         const errorLine = document.createElement('div');
         errorLine.style.marginBottom = '6px';
         errorLine.style.lineHeight = '1.4';
-        errorLine.innerHTML = `<strong>Lỗi:</strong> ${e.message} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${e.filename ? e.filename.split('/').pop() : 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}</span>`;
+        errorLine.innerHTML = `<strong>Lỗi:</strong> ${msg} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${filename ? filename.split('/').pop() : 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}</span>`;
         consoleDiv.appendChild(errorLine);
       }
     });
     window.addEventListener('unhandledrejection', function(e) {
+      const reasonMsg = e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason);
+      if (reasonMsg && (reasonMsg.includes('zalo') || reasonMsg.includes('zaloJSV2'))) {
+        return;
+      }
+
       const consoleDiv = document.getElementById('debug-error-console');
       if (consoleDiv) {
         consoleDiv.style.display = 'block';
         const errorLine = document.createElement('div');
         errorLine.style.marginBottom = '6px';
         errorLine.style.lineHeight = '1.4';
-        const msg = e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason);
-        errorLine.innerHTML = `<strong>Lỗi kết nối / Async:</strong> ${msg}`;
+        errorLine.innerHTML = `<strong>Lỗi kết nối / Async:</strong> ${reasonMsg}`;
         consoleDiv.appendChild(errorLine);
       }
     });
