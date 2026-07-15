@@ -1205,10 +1205,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const filteredData = analytics.filter(row => {
       // 1. Company match (only SuperAdmin has active company filter dropdown)
-      const companyMatch = role !== 'SuperAdmin' || selectedCompany === 'all' || row.Company === selectedCompany;
+      const companyMatch = role !== 'SuperAdmin' || selectedCompany === 'all' || selectedCompany === 'All' || row.Company === selectedCompany;
 
       // 2. Department match
-      const deptMatch = selectedDept === 'all' || row.Department === selectedDept;
+      const deptMatch = selectedDept === 'all' || selectedDept === 'All' || row.Department === selectedDept;
       
       // 3. Search match (name or employee id)
       const nameMatch = row.FullName.toLowerCase().includes(searchTerm);
@@ -2643,7 +2643,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       tr.querySelector('.btn-edit-dept').addEventListener('click', async () => {
-        const newName = prompt(`Nhập tên mới cho phòng ban "${dept.name}":`, dept.name);
+        const newName = prompt(`Nhập tên mới cho phòng ban "${dept.name}" (hoặc bấm OK để giữ nguyên):`, dept.name);
         if (newName === null) return;
         
         const cleanName = newName.trim();
@@ -2652,7 +2652,21 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const result = await window.ahcomDB.updateDepartment(dept.name, cleanName, dept.company);
+        // Fetch list of companies to display in prompt
+        const companies = await window.ahcomDB.getCompanies();
+        const newCompany = prompt(
+          `Nhập tên công ty mới cho phòng ban này (hoặc bấm OK để giữ nguyên "${dept.company}").\nCác công ty hiện có:\n- ${companies.join('\n- ')}`, 
+          dept.company
+        );
+        if (newCompany === null) return;
+
+        const cleanCompany = newCompany.trim();
+        if (!companies.includes(cleanCompany)) {
+          showToast(`Tên công ty "${cleanCompany}" không tồn tại trên hệ thống.`, 'danger');
+          return;
+        }
+
+        const result = await window.ahcomDB.updateDepartment(dept.name, cleanName, dept.company, cleanCompany);
         if (result.success) {
           showToast(result.message, 'success');
           await renderDepartmentDropdowns();
@@ -2666,8 +2680,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       tr.querySelector('.btn-delete-dept').addEventListener('click', async () => {
-        if (confirm(`Bạn có chắc chắn muốn xóa phòng ban "${dept.name}"?`)) {
-          const result = await window.ahcomDB.deleteDepartment(dept.name);
+        if (confirm(`Bạn có chắc chắn muốn xóa phòng ban "${dept.name}" thuộc "${dept.company}"?`)) {
+          const result = await window.ahcomDB.deleteDepartment(dept.name, dept.company);
           if (result.success) {
             showToast(result.message, 'success');
             await renderDepartmentDropdowns();

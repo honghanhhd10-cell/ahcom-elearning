@@ -125,36 +125,60 @@ const db = {
     return { success: true, message: `Đã thêm phòng ban "${cleanName}" thuộc "${cleanCompany}" thành công.` };
   },
 
-  async updateDepartment(oldName, newName, companyName = 'AHCOM Tổng') {
+  async updateDepartment(oldName, newName, oldCompany, newCompany) {
     const cleanOld = oldName.trim();
     const cleanNew = newName.trim();
-    const cleanCompany = companyName.trim();
+    const cleanOldCompany = oldCompany.trim();
+    const cleanNewCompany = newCompany.trim();
+    
     if (!cleanNew) return { success: false, message: 'Tên phòng ban mới không được để trống.' };
     
-    // Update department name and company association
+    // 1. Update the department name and company in ahcom_departments
     const { error: deptError } = await supabaseClient
       .from('ahcom_departments')
-      .update({ name: cleanNew, company: cleanCompany })
-      .eq('name', cleanOld);
-    if (deptError) return { success: false, message: deptError.message };
+      .update({ name: cleanNew, company: cleanNewCompany })
+      .eq('name', cleanOld)
+      .eq('company', cleanOldCompany);
+      
+    if (deptError) {
+      if (deptError.code === '23505') return { success: false, message: 'Tên phòng ban này đã tồn tại trong công ty đích.' };
+      return { success: false, message: deptError.message };
+    }
 
-    // Update users belonging to this department
-    const { error: userError } = await supabaseClient
+    // 2. Update users belonging to this department and company
+    await supabaseClient
       .from('ahcom_users')
-      .update({ department: cleanNew })
-      .eq('department', cleanOld);
+      .update({ department: cleanNew, company: cleanNewCompany })
+      .eq('department', cleanOld)
+      .eq('company', cleanOldCompany);
+
+    // 3. Update whitelist entries for this department and company
+    await supabaseClient
+      .from('ahcom_whitelist')
+      .update({ department: cleanNew, company: cleanNewCompany })
+      .eq('department', cleanOld)
+      .eq('company', cleanOldCompany);
+
+    // 4. Update courses scope
+    await supabaseClient
+      .from('ahcom_courses')
+      .update({ scope_department: cleanNew, scope_company: cleanNewCompany })
+      .eq('scope_department', cleanOld)
+      .eq('scope_company', cleanOldCompany);
     
-    return { success: true, message: `Đã đổi tên phòng ban thành "${cleanNew}" thành công.` };
+    return { success: true, message: `Đã cập nhật phòng ban thành công.` };
   },
 
-  async deleteDepartment(deptName) {
+  async deleteDepartment(deptName, companyName) {
     const cleanName = deptName.trim();
+    const cleanCompany = companyName.trim();
     
-    // Check if there are users currently belonging to this department
+    // Check if there are users currently belonging to this department in this company
     const { data: users, error: checkError } = await supabaseClient
       .from('ahcom_users')
       .select('user_id')
       .eq('department', cleanName)
+      .eq('company', cleanCompany)
       .limit(1);
     if (users && users.length > 0) {
       return { success: false, message: `Không thể xóa phòng ban "${cleanName}" do đang có nhân viên thuộc phòng ban này. Vui lòng chuyển các nhân viên sang phòng ban khác trước.` };
@@ -163,9 +187,10 @@ const db = {
     const { error } = await supabaseClient
       .from('ahcom_departments')
       .delete()
-      .eq('name', cleanName);
+      .eq('name', cleanName)
+      .eq('company', cleanCompany);
     if (error) return { success: false, message: error.message };
-    return { success: true, message: `Đã xóa phòng ban "${cleanName}" khỏi hệ thống.` };
+    return { success: true, message: `Đã xóa phòng ban "${cleanName}" thành công.` };
   },
 
   // --- WHITELIST EMPLOYEE IDS ---
