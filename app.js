@@ -168,6 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editorUserCompany: document.getElementById('editor-user-company'),
     editorUserDept: document.getElementById('editor-user-dept'),
     editorUserJobLevel: document.getElementById('editor-user-joblevel'),
+    editorUserRole: document.getElementById('editor-user-role'),
     editorUserPassword: document.getElementById('editor-user-password'),
 
     // Profile editor modal references
@@ -2216,14 +2217,17 @@ document.addEventListener('DOMContentLoaded', () => {
     await renderDepartmentDropdowns();
     el.editorUserDept.value = user.Department || 'Phòng Kinh doanh';
     el.editorUserJobLevel.value = user.JobLevel || 'Staff';
+    el.editorUserRole.value = user.Role || 'Student';
     el.editorUserPassword.value = ''; // Leave blank initially
 
-    // Disable company selection for CompanyAdmin / DeptAdmin in user editor modal
+    // Disable company and role selection for CompanyAdmin / DeptAdmin in user editor modal
     const role = state.currentUser.Role;
     if (role === 'CompanyAdmin' || role === 'DeptAdmin') {
       el.editorUserCompany.disabled = true;
+      el.editorUserRole.disabled = true;
     } else {
       el.editorUserCompany.disabled = false;
+      el.editorUserRole.disabled = false;
     }
 
     el.modalUserEditor.classList.add('active');
@@ -2245,6 +2249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const company = el.editorUserCompany.value;
     const department = el.editorUserDept.value;
     const jobLevel = el.editorUserJobLevel.value;
+    const accountRole = el.editorUserRole.value;
     const password = el.editorUserPassword.value.trim();
 
     const updatedData = {
@@ -2253,7 +2258,8 @@ document.addEventListener('DOMContentLoaded', () => {
       Email: email,
       Company: company,
       Department: department,
-      JobLevel: jobLevel
+      JobLevel: jobLevel,
+      Role: accountRole
     };
 
     if (password) {

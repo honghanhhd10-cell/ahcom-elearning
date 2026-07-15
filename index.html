@@ -779,6 +779,15 @@
               <option value="Manager">Quản lý</option>
             </select>
           </div>
+          <div class="form-group" id="group-editor-user-role">
+            <label for="editor-user-role">Vai trò tài khoản (Phân quyền)</label>
+            <select id="editor-user-role" class="form-input" required>
+              <option value="Student">Học viên (Mặc định)</option>
+              <option value="CompanyAdmin">Admin Công ty (Quản lý chi nhánh)</option>
+              <option value="DeptAdmin">Admin Phòng ban (Quản lý nội bộ)</option>
+              <option value="SuperAdmin">Admin Tổng (Ban Giám Đốc tổng)</option>
+            </select>
+          </div>
           <div class="form-group">
             <label for="editor-user-password">Mật khẩu mới (Bỏ trống nếu không đổi)</label>
             <input type="password" id="editor-user-password" class="form-input" placeholder="Nhập mật khẩu mới">
