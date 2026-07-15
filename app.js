@@ -3,6 +3,21 @@
  * Handles SPA routing, UI rendering, event bindings, progress tracking, and CSV exports
  */
 
+
+  // Catch errors globally and display them in the debug console
+  window.addEventListener('error', (event) => {
+    const consoleEl = document.getElementById('debug-error-console');
+    if (consoleEl) {
+      consoleEl.style.display = 'block';
+      const errDiv = document.createElement('div');
+      errDiv.style.marginTop = '8px';
+      errDiv.style.borderTop = '1px dashed #ff5555';
+      errDiv.style.paddingTop = '4px';
+      errDiv.textContent = `Lỗi: ${event.message} tại ${event.filename.split('/').pop()}:${event.lineno}:${event.colno}`;
+      consoleEl.appendChild(errDiv);
+    }
+  });
+
 document.addEventListener('DOMContentLoaded', () => {
   // --- APP STATE ---
   const state = {
