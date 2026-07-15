@@ -2519,47 +2519,38 @@ document.addEventListener('DOMContentLoaded', () => {
         <td class="col-stt" style="text-align: center;">${idx + 1}</td>
         <td style="font-weight: 500;">${company}</td>
         <td class="col-action" style="text-align: right; padding-right: 24px;">
+          <button class="btn btn-secondary btn-edit-company" style="padding: 6px 12px; font-size:12px; margin-right: 6px;">
+            <i class="fa-solid fa-pen-to-square"></i> Đổi tên
+          </button>
           <button class="btn btn-secondary btn-delete-company" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
             <i class="fa-solid fa-trash-can"></i> Xóa
           </button>
         </td>
       `;
 
-      tr.querySelector('.btn-delete-company').addEventListener('click', async () => {
-        if (confirm(`Bạn có chắc chắn muốn xóa công ty "${company}"? Tất cả phòng ban thuộc công ty này phải được xóa/chuyển trước.`)) {
-          const result = await window.ahcomDB.deleteCompany(company);
-          if (result.success) {
-            showToast(result.message, 'success');
-            await renderCompanyDropdowns();
-            await renderDepartmentDropdowns();
-            await renderAdminCompaniesTable();
-          } else {
-            showToast(result.message, 'danger');
+      tr.querySelector('.btn-edit-company').addEventListener('click', async () => {
+        const newName = prompt(`Nhập tên mới cho công ty "${company}":`, company);
+        if (newName === null) return;
+        
+        const cleanName = newName.trim();
+        if (!cleanName) {
+          showToast('Tên công ty không được để trống.', 'danger');
+          return;
+        }
+
+        const result = await window.ahcomDB.updateCompany(company, cleanName);
+        if (result.success) {
+          showToast(result.message, 'success');
+          await renderCompanyDropdowns();
+          await renderDepartmentDropdowns();
+          await renderAdminCompaniesTable();
+          if (state.currentView === 'view-admin-dashboard') {
+            await renderAdminDashboard();
           }
+        } else {
+          showToast(result.message, 'danger');
         }
       });
-
-      el.adminCompaniesTableBody.appendChild(tr);
-    });
-  }
-
-  // Draw Companies tab table
-  async function renderAdminCompaniesTable() {
-    const companies = await window.ahcomDB.getCompanies();
-    el.companiesCountBadge.textContent = `${companies.length} công ty`;
-    el.adminCompaniesTableBody.innerHTML = '';
-
-    companies.forEach((company, idx) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="col-stt" style="text-align: center;">${idx + 1}</td>
-        <td style="font-weight: 500;">${company}</td>
-        <td class="col-action" style="text-align: right; padding-right: 24px;">
-          <button class="btn btn-secondary btn-delete-company" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
-            <i class="fa-solid fa-trash-can"></i> Xóa
-          </button>
-        </td>
-      `;
 
       tr.querySelector('.btn-delete-company').addEventListener('click', async () => {
         if (confirm(`Bạn có chắc chắn muốn xóa công ty "${company}"? Tất cả phòng ban thuộc công ty này phải được xóa/chuyển trước.`)) {

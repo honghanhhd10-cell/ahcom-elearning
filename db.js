@@ -67,6 +67,30 @@ const db = {
     return { success: true, message: `Đã xóa công ty "${cleanName}" khỏi hệ thống.` };
   },
 
+  async updateCompany(oldName, newName) {
+    const cleanOldName = oldName.trim();
+    const cleanNewName = newName.trim();
+    if (!cleanNewName) return { success: false, message: 'Tên công ty không được để trống.' };
+
+    const { error: companyError } = await supabaseClient
+      .from('ahcom_companies')
+      .update({ name: cleanNewName })
+      .eq('name', cleanOldName);
+      
+    if (companyError) {
+      if (companyError.code === '23505') return { success: false, message: 'Công ty này đã tồn tại.' };
+      return { success: false, message: companyError.message };
+    }
+
+    // Cascade update referencing tables (using simple string matches)
+    await supabaseClient.from('ahcom_departments').update({ company: cleanNewName }).eq('company', cleanOldName);
+    await supabaseClient.from('ahcom_whitelist').update({ company: cleanNewName }).eq('company', cleanOldName);
+    await supabaseClient.from('ahcom_users').update({ company: cleanNewName }).eq('company', cleanOldName);
+    await supabaseClient.from('ahcom_courses').update({ scope_company: cleanNewName }).eq('scope_company', cleanOldName);
+
+    return { success: true, message: `Đổi tên công ty thành "${cleanNewName}" thành công.` };
+  },
+
   // --- DEPARTMENTS CRUD ---
   async getDepartments(companyFilter = null) {
     let query = supabaseClient
