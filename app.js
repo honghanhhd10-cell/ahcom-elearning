@@ -1093,10 +1093,45 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- ADMIN PORTAL PANEL RENDERING ---
+  // --- ADMIN PORTAL PANEL RENDERING ---
   async function renderAdminDashboard() {
-    const analytics = await window.ahcomDB.getAdminAnalytics();
-    const courses = await window.ahcomDB.getCourses();
+    let analytics = await window.ahcomDB.getAdminAnalytics();
+    let courses = await window.ahcomDB.getCourses();
     
+    // RBAC tab visibility control
+    const role = state.currentUser.Role;
+    if (role === 'SuperAdmin') {
+      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'inline-flex';
+      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
+    } else if (role === 'CompanyAdmin') {
+      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
+      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
+    } else { // DeptAdmin
+      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
+      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'none';
+    }
+
+    // Load static dropdown choices
+    await renderCompanyDropdowns();
+    await renderDepartmentDropdowns();
+
+    // Show/hide company filter select on dashboard
+    if (el.adminCompanyFilter) {
+      el.adminCompanyFilter.style.display = role === 'SuperAdmin' ? 'inline-flex' : 'none';
+    }
+
+    // RBAC filtering of stats and records
+    const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+    const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+
+    if (role === 'CompanyAdmin') {
+      analytics = analytics.filter(u => u.Company === userCompany);
+      courses = courses.filter(c => c.ScopeCompany === 'All' || c.ScopeCompany === userCompany);
+    } else if (role === 'DeptAdmin') {
+      analytics = analytics.filter(u => u.Company === userCompany && u.Department === userDept);
+      courses = courses.filter(c => (c.ScopeCompany === 'All' || c.ScopeCompany === userCompany) && (c.ScopeDepartment === 'All' || c.ScopeDepartment === userDept));
+    }
+
     // Update summary counters
     el.statTotalStudents.textContent = analytics.length;
     el.statTotalCourses.textContent = courses.length;
@@ -1124,23 +1159,38 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Draw admin table with filters applied
   async function renderAdminTable() {
-    const analytics = await window.ahcomDB.getAdminAnalytics();
+    let analytics = await window.ahcomDB.getAdminAnalytics();
     
+    // RBAC filtering of rows based on admin's designated scope
+    const role = state.currentUser.Role;
+    const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+    const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+
+    if (role === 'CompanyAdmin') {
+      analytics = analytics.filter(row => row.Company === userCompany);
+    } else if (role === 'DeptAdmin') {
+      analytics = analytics.filter(row => row.Company === userCompany && row.Department === userDept);
+    }
+
     // Read current filter state
     const searchTerm = el.adminSearchInput.value.toLowerCase().trim();
+    const selectedCompany = el.adminCompanyFilter ? el.adminCompanyFilter.value : 'all';
     const selectedDept = el.adminDeptFilter.value;
 
     el.adminTableBody.innerHTML = '';
 
     const filteredData = analytics.filter(row => {
-      // 1. Department match
+      // 1. Company match (only SuperAdmin has active company filter dropdown)
+      const companyMatch = role !== 'SuperAdmin' || selectedCompany === 'all' || row.Company === selectedCompany;
+
+      // 2. Department match
       const deptMatch = selectedDept === 'all' || row.Department === selectedDept;
       
-      // 2. Search match (name or employee id)
+      // 3. Search match (name or employee id)
       const nameMatch = row.FullName.toLowerCase().includes(searchTerm);
       const empIdMatch = row.EmployeeID.toLowerCase().includes(searchTerm);
       
-      return deptMatch && (nameMatch || empIdMatch);
+      return companyMatch && deptMatch && (nameMatch || empIdMatch);
     });
 
     if (filteredData.length === 0) {
