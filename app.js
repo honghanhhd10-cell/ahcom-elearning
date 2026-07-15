@@ -48,6 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     regEmpId: document.getElementById('reg-empid'),
     regEmail: document.getElementById('reg-email'),
     regPassword: document.getElementById('reg-password'),
+    regCompany: document.getElementById('reg-company'),
     regDept: document.getElementById('reg-department'),
     regJobLevel: document.getElementById('reg-job-level'),
 
@@ -80,6 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     statCompletedLessons: document.getElementById('stat-completed-lessons'),
     statPassedQuizzes: document.getElementById('stat-passed-quizzes'),
     adminSearchInput: document.getElementById('admin-search-input'),
+    adminCompanyFilter: document.getElementById('admin-company-filter'),
     adminDeptFilter: document.getElementById('admin-dept-filter'),
     adminTableBody: document.getElementById('admin-analytics-table-body'),
     btnExportCSV: document.getElementById('btn-export-csv'),
@@ -97,6 +99,8 @@ document.addEventListener('DOMContentLoaded', () => {
     tabContentWhitelist: document.getElementById('tab-content-whitelist'),
     formAddWhitelist: document.getElementById('form-add-whitelist'),
     whitelistEmpIdInput: document.getElementById('whitelist-empid-input'),
+    whitelistCompanySelect: document.getElementById('whitelist-company-select'),
+    whitelistDeptSelect: document.getElementById('whitelist-dept-select'),
     whitelistCountBadge: document.getElementById('whitelist-count-badge'),
     adminWhitelistTableBody: document.getElementById('admin-whitelist-table-body'),
     btnImportWhitelistFile: document.getElementById('btn-import-whitelist-file'),
@@ -107,8 +111,17 @@ document.addEventListener('DOMContentLoaded', () => {
     tabContentDepartments: document.getElementById('tab-content-departments'),
     formAddDepartment: document.getElementById('form-add-department'),
     departmentNameInput: document.getElementById('department-name-input'),
+    departmentCompanySelect: document.getElementById('department-company-select'),
     departmentsCountBadge: document.getElementById('departments-count-badge'),
     adminDepartmentsTableBody: document.getElementById('admin-departments-table-body'),
+
+    // Admin company configuration elements
+    btnTabCompanies: document.getElementById('btn-tab-companies'),
+    tabContentCompanies: document.getElementById('tab-content-companies'),
+    formAddCompany: document.getElementById('form-add-company'),
+    companyNameInput: document.getElementById('company-name-input'),
+    companiesCountBadge: document.getElementById('companies-count-badge'),
+    adminCompaniesTableBody: document.getElementById('admin-companies-table-body'),
 
     // Modal elements
     modalCourseEditor: document.getElementById('modal-course-editor'),
@@ -120,6 +133,8 @@ document.addEventListener('DOMContentLoaded', () => {
     editorCategory: document.getElementById('editor-category'),
     editorContentType: document.getElementById('editor-content-type'),
     editorTargetGroup: document.getElementById('editor-target-group'),
+    editorScopeCompany: document.getElementById('editor-scope-company'),
+    editorScopeDepartment: document.getElementById('editor-scope-department'),
     editorGroupSlideSource: document.getElementById('editor-group-slide-source'),
     editorSlideSource: document.getElementById('editor-slide-source'),
     editorGroupVideoUrl: document.getElementById('editor-group-video-url'),
@@ -150,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editorUserFullname: document.getElementById('editor-user-fullname'),
     editorUserEmpId: document.getElementById('editor-user-empid'),
     editorUserEmail: document.getElementById('editor-user-email'),
+    editorUserCompany: document.getElementById('editor-user-company'),
     editorUserDept: document.getElementById('editor-user-dept'),
     editorUserJobLevel: document.getElementById('editor-user-joblevel'),
     editorUserPassword: document.getElementById('editor-user-password'),
@@ -164,6 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     profileFullname: document.getElementById('profile-fullname'),
     profileEmpId: document.getElementById('profile-empid'),
     profileEmail: document.getElementById('profile-email'),
+    profileCompany: document.getElementById('profile-company'),
     profileDept: document.getElementById('profile-dept'),
     profileJobLevel: document.getElementById('profile-joblevel'),
     profilePassword: document.getElementById('profile-password')
@@ -234,15 +251,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.currentUser) {
       el.navbar.style.display = 'block';
       el.displayUserName.textContent = state.currentUser.FullName;
-      el.displayUserRole.textContent = state.currentUser.Role === 'Admin' 
-        ? `${state.currentUser.Department || 'Ban Giám Đốc'} / Quản trị` 
-        : state.currentUser.Department;
+      
+      const role = state.currentUser.Role;
+      const isAdmin = role === 'SuperAdmin' || role === 'CompanyAdmin' || role === 'DeptAdmin' || role === 'Admin';
+
+      let roleText = 'Học viên';
+      if (role === 'SuperAdmin') roleText = 'Admin Tổng';
+      else if (role === 'CompanyAdmin') roleText = 'Admin Công ty';
+      else if (role === 'DeptAdmin') roleText = 'Admin Phòng ban';
+      
+      el.displayUserRole.textContent = `${state.currentUser.Company || 'AHCOM Tổng'} / ${state.currentUser.Department || 'Ban Giám Đốc'} (${roleText})`;
 
       // Reset nav link active states
       el.navCourses.classList.remove('active');
       el.navAdmin.classList.remove('active');
 
-      if (state.currentUser.Role === 'Admin') {
+      if (isAdmin) {
         el.navAdmin.style.display = 'inline-flex';
         el.navCourses.style.display = 'inline-flex'; // Allow admin to see/test courses too
         if (viewId === 'view-admin-dashboard') {
@@ -276,7 +300,9 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast(`Đăng nhập thành công! Chào mừng ${result.user.FullName}.`, 'success');
 
       // Routing logic based on Role
-      if (result.user.Role === 'Admin') {
+      const role = result.user.Role;
+      const isAdmin = role === 'SuperAdmin' || role === 'CompanyAdmin' || role === 'DeptAdmin' || role === 'Admin';
+      if (isAdmin) {
         await renderAdminDashboard();
         showView('view-admin-dashboard');
       } else {
@@ -298,6 +324,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const empId = el.regEmpId.value;
     const email = el.regEmail.value;
     const password = el.regPassword.value;
+    const company = el.regCompany.value;
     const department = el.regDept.value;
     const jobLevel = el.regJobLevel.value;
 
@@ -306,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const result = await window.ahcomDB.registerUser(fullName, empId, email, password, department, jobLevel);
+    const result = await window.ahcomDB.registerUser(fullName, empId, email, password, department, jobLevel, company);
 
     if (result.success) {
       showToast('Đăng ký tài khoản thành công! Bạn có thể đăng nhập ngay.', 'success');
@@ -370,7 +397,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- STUDENT DASHBOARD RENDERING ---
   async function renderStudentDashboard() {
     // Set welcome text
-    document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Department})</span>`;
+    document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Company || 'AHCOM Tổng'} - ${state.currentUser.Department})</span>`;
     
     const courses = await window.ahcomDB.getCourses();
     const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
@@ -382,9 +409,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     el.coursesContainer.innerHTML = '';
 
-    const filteredCourses = selectedCategory === 'all' 
-      ? courses 
-      : courses.filter(c => c.Category === selectedCategory);
+    // Multi-tenant course scoping
+    let filteredCourses = courses;
+    if (state.currentUser.Role !== 'SuperAdmin') {
+      const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+      const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+
+      filteredCourses = courses.filter(course => {
+        const compMatch = course.ScopeCompany === 'All' || course.ScopeCompany === userCompany;
+        const deptMatch = course.ScopeDepartment === 'All' || course.ScopeDepartment === userDept;
+        return compMatch && deptMatch;
+      });
+    }
+
+    if (selectedCategory !== 'all') {
+      filteredCourses = filteredCourses.filter(c => c.Category === selectedCategory);
+    }
 
     if (filteredCourses.length === 0) {
       el.coursesContainer.innerHTML = `
@@ -535,7 +575,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- COURSE VIEWER (STUDY SCREEN) ---
   async function loadCourseViewer(course) {
     // RBAC Security Guard
-    if (state.currentUser && state.currentUser.Role !== 'Admin') {
+    const userRole = state.currentUser ? state.currentUser.Role : 'Student';
+    const isAdmin = userRole === 'SuperAdmin' || userRole === 'CompanyAdmin' || userRole === 'DeptAdmin' || userRole === 'Admin';
+    if (state.currentUser && !isAdmin) {
       const userJobLevel = state.currentUser.JobLevel || 'Staff';
       const courseTarget = course.TargetGroup || 'All';
       if (courseTarget === 'Manager' && userJobLevel !== 'Manager') {
@@ -1788,7 +1830,10 @@ document.addEventListener('DOMContentLoaded', () => {
       ContentType: contentType,
       TargetGroup: targetGroup,
       ThumbnailURL: state.currentThumbnailBase64,
-      QuizQuestions: []
+      QuizQuestions: [],
+      ScopeCompany: el.editorScopeCompany.value,
+      ScopeDepartment: el.editorScopeDepartment.value,
+      CreatedByUserId: state.currentUser ? state.currentUser.UserID : null
     };
 
     // Gather and validate Video vs Slide contents
@@ -2151,8 +2196,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- ADMIN USER EDITOR CONTROLLER ---
-  function openUserEditorModal(userId) {
-    const users = JSON.parse(localStorage.getItem('ahcom_users')) || [];
+  async function openUserEditorModal(userId) {
+    const users = await window.ahcomDB.getUsers();
     const user = users.find(u => u.UserID === userId);
     if (!user) {
       showToast('Không tìm thấy người dùng.', 'danger');
@@ -2163,9 +2208,23 @@ document.addEventListener('DOMContentLoaded', () => {
     el.editorUserFullname.value = user.FullName;
     el.editorUserEmpId.value = user.EmployeeID;
     el.editorUserEmail.value = user.Email;
+
+    // Load static dropdown choices
+    await renderCompanyDropdowns();
+    el.editorUserCompany.value = user.Company || 'AHCOM Tổng';
+
+    await renderDepartmentDropdowns();
     el.editorUserDept.value = user.Department || 'Phòng Kinh doanh';
     el.editorUserJobLevel.value = user.JobLevel || 'Staff';
     el.editorUserPassword.value = ''; // Leave blank initially
+
+    // Disable company selection for CompanyAdmin / DeptAdmin in user editor modal
+    const role = state.currentUser.Role;
+    if (role === 'CompanyAdmin' || role === 'DeptAdmin') {
+      el.editorUserCompany.disabled = true;
+    } else {
+      el.editorUserCompany.disabled = false;
+    }
 
     el.modalUserEditor.classList.add('active');
   }
@@ -2183,6 +2242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const fullName = el.editorUserFullname.value.trim();
     const empId = el.editorUserEmpId.value.trim().toUpperCase();
     const email = el.editorUserEmail.value.trim();
+    const company = el.editorUserCompany.value;
     const department = el.editorUserDept.value;
     const jobLevel = el.editorUserJobLevel.value;
     const password = el.editorUserPassword.value.trim();
@@ -2191,6 +2251,7 @@ document.addEventListener('DOMContentLoaded', () => {
       FullName: fullName,
       EmployeeID: empId,
       Email: email,
+      Company: company,
       Department: department,
       JobLevel: jobLevel
     };
@@ -2226,6 +2287,12 @@ document.addEventListener('DOMContentLoaded', () => {
     el.profileFullname.value = user.FullName;
     el.profileEmpId.value = user.EmployeeID;
     el.profileEmail.value = user.Email;
+
+    // Load static dropdown choices
+    await renderCompanyDropdowns();
+    el.profileCompany.value = user.Company || 'AHCOM Tổng';
+
+    await renderDepartmentDropdowns();
     el.profileDept.value = user.Department || 'Phòng Kinh doanh';
     el.profileJobLevel.value = user.JobLevel || 'Staff';
     el.profilePassword.value = ''; // Leave blank initially
@@ -2251,9 +2318,9 @@ document.addEventListener('DOMContentLoaded', () => {
   el.formProfileEditor.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.currentUser) return;
-
     const fullName = el.profileFullname.value.trim();
     const email = el.profileEmail.value.trim();
+    const company = el.profileCompany.value;
     const department = el.profileDept.value;
     const jobLevel = el.profileJobLevel.value;
     const password = el.profilePassword.value.trim();
@@ -2261,6 +2328,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const updatedData = {
       FullName: fullName,
       Email: email,
+      Company: company,
       Department: department,
       JobLevel: jobLevel
     };
@@ -2295,72 +2363,179 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 
-  // --- ADMIN DEPARTMENT MANAGER LOGIC ---
+  // --- ADMIN COMPANY & DEPARTMENT MANAGER LOGIC ---
 
-  // Dynamic department dropdown population
+  // Dynamic company dropdown population
+  async function renderCompanyDropdowns() {
+    const companies = await window.ahcomDB.getCompanies();
+
+    const fillSelect = (selectEl, defaultOptText = null) => {
+      if (!selectEl) return;
+      const currentVal = selectEl.value;
+      selectEl.innerHTML = '';
+      if (defaultOptText) {
+        const defOpt = document.createElement('option');
+        defOpt.value = (defaultOptText === 'Tất cả' || defaultOptText === 'Tất cả Công ty') ? 'All' : (defaultOptText.includes('Chọn') ? '' : 'all');
+        if (defaultOptText.includes('Chọn')) {
+          defOpt.disabled = true;
+        }
+        defOpt.textContent = defaultOptText;
+        selectEl.appendChild(defOpt);
+      }
+      companies.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        selectEl.appendChild(opt);
+      });
+      selectEl.value = currentVal || (defaultOptText ? ((defaultOptText === 'Tất cả' || defaultOptText === 'Tất cả Công ty') ? 'All' : (defaultOptText.includes('Chọn') ? '' : 'all')) : '');
+    };
+
+    fillSelect(el.regCompany, 'Chọn công ty của bạn');
+    fillSelect(el.adminCompanyFilter, 'Tất cả Công ty');
+    fillSelect(el.whitelistCompanySelect, 'Chọn công ty');
+    fillSelect(el.departmentCompanySelect, 'Chọn công ty');
+    fillSelect(el.editorScopeCompany, 'Tất cả');
+    fillSelect(el.editorUserCompany, 'Chọn công ty');
+    fillSelect(el.profileCompany, 'Chọn công ty');
+  }
+
+  // Dynamic department dropdown population (filtered by parent company selection)
   async function renderDepartmentDropdowns() {
-    const depts = await window.ahcomDB.getDepartments();
+    const depts = await window.ahcomDB.getDepartments(); // returns array of { name, company }
 
-    // 1. Register Form Dropdown
-    if (el.regDept) {
-      const currentVal = el.regDept.value;
-      el.regDept.innerHTML = '<option value="" disabled>Chọn phòng ban của bạn</option>';
-      depts.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        el.regDept.appendChild(opt);
-      });
-      el.regDept.value = currentVal || "";
-    }
-
-    // 2. Profile Editor Form Dropdown
-    if (el.profileDept) {
-      const currentVal = el.profileDept.value;
-      el.profileDept.innerHTML = '';
-      depts.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        el.profileDept.appendChild(opt);
-      });
-      if (currentVal && depts.includes(currentVal)) {
-        el.profileDept.value = currentVal;
+    const fillDeptSelect = (deptSelectEl, selectedCompany, defaultOptText = null) => {
+      if (!deptSelectEl) return;
+      const currentVal = deptSelectEl.value;
+      deptSelectEl.innerHTML = '';
+      if (defaultOptText) {
+        const defOpt = document.createElement('option');
+        defOpt.value = (defaultOptText === 'Tất cả phòng ban' || defaultOptText === 'Tất cả') ? 'All' : (defaultOptText.includes('Chọn') ? '' : 'all');
+        if (defaultOptText.includes('Chọn')) {
+          defOpt.disabled = true;
+        }
+        defOpt.textContent = defaultOptText;
+        deptSelectEl.appendChild(defOpt);
       }
-    }
-
-    // 3. Admin Edit User Modal Dropdown
-    if (el.editorUserDept) {
-      const currentVal = el.editorUserDept.value;
-      el.editorUserDept.innerHTML = '';
-      depts.forEach(d => {
+      
+      const filteredDepts = depts.filter(d => !selectedCompany || selectedCompany === 'all' || selectedCompany === 'All' || d.company === selectedCompany);
+      
+      filteredDepts.forEach(d => {
         const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        el.editorUserDept.appendChild(opt);
+        opt.value = d.name;
+        opt.textContent = d.name;
+        deptSelectEl.appendChild(opt);
       });
-      if (currentVal && depts.includes(currentVal)) {
-        el.editorUserDept.value = currentVal;
-      }
-    }
+      
+      deptSelectEl.value = currentVal || (defaultOptText ? ((defaultOptText === 'Tất cả phòng ban' || defaultOptText === 'Tất cả') ? 'All' : (defaultOptText.includes('Chọn') ? '' : 'all')) : '');
+    };
 
-    // 4. Admin Analytics Table Dept Filter
-    if (el.adminDeptFilter) {
-      const currentVal = el.adminDeptFilter.value;
-      el.adminDeptFilter.innerHTML = '<option value="all">Tất cả Phòng ban</option>';
-      depts.forEach(d => {
-        const opt = document.createElement('option');
-        opt.value = d;
-        opt.textContent = d;
-        el.adminDeptFilter.appendChild(opt);
+    fillDeptSelect(el.regDept, el.regCompany ? el.regCompany.value : null, 'Chọn phòng ban (Chọn công ty trước)');
+    fillDeptSelect(el.profileDept, el.profileCompany ? el.profileCompany.value : null, 'Chọn phòng ban');
+    fillDeptSelect(el.editorUserDept, el.editorUserCompany ? el.editorUserCompany.value : null, 'Chọn phòng ban');
+    fillDeptSelect(el.adminDeptFilter, el.adminCompanyFilter ? el.adminCompanyFilter.value : null, 'Tất cả Phòng ban');
+    fillDeptSelect(el.whitelistDeptSelect, el.whitelistCompanySelect ? el.whitelistCompanySelect.value : null, 'Chọn phòng ban');
+    fillDeptSelect(el.editorScopeDepartment, el.editorScopeCompany ? el.editorScopeCompany.value : null, 'Tất cả');
+  }
+
+  // Bind change event listeners for dynamic nested department selections
+  if (el.regCompany) el.regCompany.addEventListener('change', () => renderDepartmentDropdowns());
+  if (el.profileCompany) el.profileCompany.addEventListener('change', () => renderDepartmentDropdowns());
+  if (el.editorUserCompany) el.editorUserCompany.addEventListener('change', () => renderDepartmentDropdowns());
+  if (el.adminCompanyFilter) {
+    el.adminCompanyFilter.addEventListener('change', () => {
+      renderDepartmentDropdowns();
+      renderAdminTable();
+    });
+  }
+  if (el.whitelistCompanySelect) el.whitelistCompanySelect.addEventListener('change', () => renderDepartmentDropdowns());
+  if (el.editorScopeCompany) el.editorScopeCompany.addEventListener('change', () => renderDepartmentDropdowns());
+
+  // Draw Companies tab table
+  async function renderAdminCompaniesTable() {
+    const companies = await window.ahcomDB.getCompanies();
+    el.companiesCountBadge.textContent = `${companies.length} công ty`;
+    el.adminCompaniesTableBody.innerHTML = '';
+
+    companies.forEach((company, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="col-stt" style="text-align: center;">${idx + 1}</td>
+        <td style="font-weight: 500;">${company}</td>
+        <td class="col-action" style="text-align: right; padding-right: 24px;">
+          <button class="btn btn-secondary btn-delete-company" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
+            <i class="fa-solid fa-trash-can"></i> Xóa
+          </button>
+        </td>
+      `;
+
+      tr.querySelector('.btn-delete-company').addEventListener('click', async () => {
+        if (confirm(`Bạn có chắc chắn muốn xóa công ty "${company}"? Tất cả phòng ban thuộc công ty này phải được xóa/chuyển trước.`)) {
+          const result = await window.ahcomDB.deleteCompany(company);
+          if (result.success) {
+            showToast(result.message, 'success');
+            await renderCompanyDropdowns();
+            await renderDepartmentDropdowns();
+            await renderAdminCompaniesTable();
+          } else {
+            showToast(result.message, 'danger');
+          }
+        }
       });
-      el.adminDeptFilter.value = currentVal || "all";
-    }
+
+      el.adminCompaniesTableBody.appendChild(tr);
+    });
+  }
+
+  // Draw Companies tab table
+  async function renderAdminCompaniesTable() {
+    const companies = await window.ahcomDB.getCompanies();
+    el.companiesCountBadge.textContent = `${companies.length} công ty`;
+    el.adminCompaniesTableBody.innerHTML = '';
+
+    companies.forEach((company, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="col-stt" style="text-align: center;">${idx + 1}</td>
+        <td style="font-weight: 500;">${company}</td>
+        <td class="col-action" style="text-align: right; padding-right: 24px;">
+          <button class="btn btn-secondary btn-delete-company" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
+            <i class="fa-solid fa-trash-can"></i> Xóa
+          </button>
+        </td>
+      `;
+
+      tr.querySelector('.btn-delete-company').addEventListener('click', async () => {
+        if (confirm(`Bạn có chắc chắn muốn xóa công ty "${company}"? Tất cả phòng ban thuộc công ty này phải được xóa/chuyển trước.`)) {
+          const result = await window.ahcomDB.deleteCompany(company);
+          if (result.success) {
+            showToast(result.message, 'success');
+            await renderCompanyDropdowns();
+            await renderDepartmentDropdowns();
+            await renderAdminCompaniesTable();
+          } else {
+            showToast(result.message, 'danger');
+          }
+        }
+      });
+
+      el.adminCompaniesTableBody.appendChild(tr);
+    });
   }
 
   // Draw Departments tab table
   async function renderAdminDepartmentsTable() {
-    const depts = await window.ahcomDB.getDepartments();
+    const userCompany = state.currentUser ? state.currentUser.Company : 'AHCOM Tổng';
+    const userRole = state.currentUser ? state.currentUser.Role : 'Student';
+    
+    let depts = await window.ahcomDB.getDepartments();
+    
+    if (userRole === 'CompanyAdmin') {
+      depts = depts.filter(d => d.company === userCompany);
+    } else if (userRole === 'DeptAdmin') {
+      depts = depts.filter(d => d.company === userCompany && d.name === state.currentUser.Department);
+    }
+
     el.departmentsCountBadge.textContent = `${depts.length} phòng ban`;
     el.adminDepartmentsTableBody.innerHTML = '';
 
@@ -2368,21 +2543,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td class="col-stt" style="text-align: center;">${idx + 1}</td>
-        <td style="font-weight: 500;">${dept}</td>
+        <td>${dept.company}</td>
+        <td style="font-weight: 500;">${dept.name}</td>
         <td class="col-action" style="text-align: right; padding-right: 24px;">
           <button class="btn btn-secondary btn-edit-dept" style="padding: 6px 12px; font-size:12px; margin-right: 6px;">
-            <i class="fa-solid fa-pen-to-square"></i> Sửa
+            <i class="fa-solid fa-pen-to-square"></i> Đổi tên
           </button>
-          <button class="btn btn-primary btn-delete-dept" style="padding: 6px 12px; font-size:12px; background-color: var(--danger);">
+          <button class="btn btn-secondary btn-delete-dept" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
             <i class="fa-solid fa-trash-can"></i> Xóa
           </button>
         </td>
       `;
 
-      // Bind Edit Click
       tr.querySelector('.btn-edit-dept').addEventListener('click', async () => {
-        const newName = prompt(`Nhập tên mới cho phòng ban "${dept}":`, dept);
-        if (newName === null) return; // Cancelled
+        const newName = prompt(`Nhập tên mới cho phòng ban "${dept.name}":`, dept.name);
+        if (newName === null) return;
         
         const cleanName = newName.trim();
         if (!cleanName) {
@@ -2390,13 +2565,11 @@ document.addEventListener('DOMContentLoaded', () => {
           return;
         }
 
-        const result = await window.ahcomDB.updateDepartment(dept, cleanName);
+        const result = await window.ahcomDB.updateDepartment(dept.name, cleanName, dept.company);
         if (result.success) {
           showToast(result.message, 'success');
-          // Refresh list of depts in DB and UI dropdowns
           await renderDepartmentDropdowns();
           await renderAdminDepartmentsTable();
-          // Update admin table if rendering analytics
           if (state.currentView === 'view-admin-dashboard') {
             await renderAdminDashboard();
           }
@@ -2405,16 +2578,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      // Bind Delete Click
       tr.querySelector('.btn-delete-dept').addEventListener('click', async () => {
-        if (confirm(`Bạn có chắc chắn muốn xóa phòng ban "${dept}"?`)) {
-          const result = await window.ahcomDB.deleteDepartment(dept);
+        if (confirm(`Bạn có chắc chắn muốn xóa phòng ban "${dept.name}"?`)) {
+          const result = await window.ahcomDB.deleteDepartment(dept.name);
           if (result.success) {
             showToast(result.message, 'success');
-            // Refresh list of depts in DB and UI dropdowns
             await renderDepartmentDropdowns();
             await renderAdminDepartmentsTable();
-            // Update admin table if rendering analytics
             if (state.currentView === 'view-admin-dashboard') {
               await renderAdminDashboard();
             }
@@ -2428,13 +2598,35 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Handle Add Company submit
+  if (el.formAddCompany) {
+    el.formAddCompany.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newCompanyName = el.companyNameInput.value.trim();
+      if (!newCompanyName) return;
+
+      const result = await window.ahcomDB.addCompany(newCompanyName);
+
+      if (result.success) {
+        showToast(result.message, 'success');
+        el.companyNameInput.value = '';
+        await renderCompanyDropdowns();
+        await renderDepartmentDropdowns();
+        await renderAdminCompaniesTable();
+      } else {
+        showToast(result.message, 'danger');
+      }
+    });
+  }
+
   // Handle Add Department submit
   el.formAddDepartment.addEventListener('submit', async (e) => {
     e.preventDefault();
     const newDeptName = el.departmentNameInput.value.trim();
+    const selectedCompany = el.departmentCompanySelect.value || 'AHCOM Tổng';
     if (!newDeptName) return;
 
-    const result = await window.ahcomDB.addDepartment(newDeptName);
+    const result = await window.ahcomDB.addDepartment(newDeptName, selectedCompany);
 
     if (result.success) {
       showToast(result.message, 'success');
@@ -2446,16 +2638,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Initial load of dropdowns
-  renderDepartmentDropdowns().catch(err => console.error(err));
+  // Tab controller helper (NEW)
+  function switchTab(activeTabBtn, activeTabContent, loadCallback = null) {
+    const tabBtns = [el.btnTabAnalytics, el.btnTabCourses, el.btnTabWhitelist, el.btnTabDepartments, el.btnTabCompanies];
+    const tabContents = [el.tabContentAnalytics, el.tabContentCourses, el.tabContentWhitelist, el.tabContentDepartments, el.tabContentCompanies];
+
+    tabBtns.forEach(btn => { if (btn) btn.classList.remove('active'); });
+    tabContents.forEach(content => { if (content) content.classList.remove('active'); });
+
+    activeTabBtn.classList.add('active');
+    activeTabContent.classList.add('active');
+
+    if (loadCallback) loadCallback();
+  }
+
+  el.btnTabAnalytics.addEventListener('click', () => switchTab(el.btnTabAnalytics, el.tabContentAnalytics, renderAdminTable));
+  el.btnTabCourses.addEventListener('click', () => switchTab(el.btnTabCourses, el.tabContentCourses, renderAdminCoursesTable));
+  el.btnTabWhitelist.addEventListener('click', () => switchTab(el.btnTabWhitelist, el.tabContentWhitelist, renderWhitelistTable));
+  if (el.btnTabDepartments) {
+    el.btnTabDepartments.addEventListener('click', () => switchTab(el.btnTabDepartments, el.tabContentDepartments, renderAdminDepartmentsTable));
+  }
+  if (el.btnTabCompanies) {
+    el.btnTabCompanies.addEventListener('click', () => switchTab(el.btnTabCompanies, el.tabContentCompanies, renderAdminCompaniesTable));
+  }
+
+  // Initial load of static dropdown parameters
+  (async () => {
+    await renderCompanyDropdowns();
+    await renderDepartmentDropdowns();
+  })().catch(err => console.error(err));
 
 
   // --- AUTO SESSION LOGIN CHECK ---
   const activeSession = sessionStorage.getItem('ahcom_session');
   if (activeSession) {
     state.currentUser = JSON.parse(activeSession);
+    const role = state.currentUser.Role;
+    const isAdmin = role === 'SuperAdmin' || role === 'CompanyAdmin' || role === 'DeptAdmin' || role === 'Admin';
     
-    if (state.currentUser.Role === 'Admin') {
+    if (isAdmin) {
       renderAdminDashboard().catch(err => console.error(err));
       showView('view-admin-dashboard');
     } else {

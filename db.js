@@ -1,5 +1,5 @@
 /**
- * AHCOM E-Learning Database Connector (Supabase Integration Layer)
+ * AHCOM E-Learning Database Connector (Supabase Integration Layer - Multi-tenant Upgrade)
  * Manages asynchronous cloud sync with Supabase PostgreSQL and handles large local videos via IndexedDB.
  */
 
@@ -10,41 +10,107 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const db = {
-  // --- DEPARTMENTS CRUD ---
-  async getDepartments() {
+  // --- COMPANIES CRUD (NEW) ---
+  async getCompanies() {
     const { data, error } = await supabaseClient
-      .from('ahcom_departments')
+      .from('ahcom_companies')
       .select('name')
       .order('id', { ascending: true });
+    if (error) {
+      console.error("Lỗi getCompanies: ", error);
+      return [];
+    }
+    return data.map(c => c.name);
+  },
+
+  async addCompany(companyName) {
+    const cleanName = companyName.trim();
+    if (!cleanName) return { success: false, message: 'Tên công ty không được để trống.' };
+    const { error } = await supabaseClient
+      .from('ahcom_companies')
+      .insert({ name: cleanName });
+    if (error) {
+      if (error.code === '23505') return { success: false, message: 'Công ty này đã tồn tại.' };
+      return { success: false, message: error.message };
+    }
+    return { success: true, message: `Đã thêm công ty "${cleanName}" thành công.` };
+  },
+
+  async deleteCompany(companyName) {
+    const cleanName = companyName.trim();
+    
+    // Check if there are users currently belonging to this company
+    const { data: users, error: userCheckError } = await supabaseClient
+      .from('ahcom_users')
+      .select('user_id')
+      .eq('company', cleanName)
+      .limit(1);
+    if (users && users.length > 0) {
+      return { success: false, message: `Không thể xóa công ty "${cleanName}" vì đang có nhân viên trực thuộc.` };
+    }
+
+    // Check if there are departments currently belonging to this company
+    const { data: depts, error: deptCheckError } = await supabaseClient
+      .from('ahcom_departments')
+      .select('id')
+      .eq('company', cleanName)
+      .limit(1);
+    if (depts && depts.length > 0) {
+      return { success: false, message: `Không thể xóa công ty "${cleanName}" vì đang có phòng ban trực thuộc.` };
+    }
+
+    const { error } = await supabaseClient
+      .from('ahcom_companies')
+      .delete()
+      .eq('name', cleanName);
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: `Đã xóa công ty "${cleanName}" khỏi hệ thống.` };
+  },
+
+  // --- DEPARTMENTS CRUD ---
+  async getDepartments(companyFilter = null) {
+    let query = supabaseClient
+      .from('ahcom_departments')
+      .select('name, company')
+      .order('id', { ascending: true });
+    
+    if (companyFilter) {
+      query = query.eq('company', companyFilter);
+    }
+
+    const { data, error } = await query;
     if (error) {
       console.error("Lỗi getDepartments: ", error);
       return [];
     }
-    return data.map(d => d.name);
+    // Return objects containing both name and company for dynamic frontend filtering
+    return data.map(d => ({ name: d.name, company: d.company || 'AHCOM Tổng' }));
   },
 
-  async addDepartment(deptName) {
+  async addDepartment(deptName, companyName = 'AHCOM Tổng') {
     const cleanName = deptName.trim();
+    const cleanCompany = companyName.trim();
     if (!cleanName) return { success: false, message: 'Tên phòng ban không được để trống.' };
     const { error } = await supabaseClient
       .from('ahcom_departments')
-      .insert({ name: cleanName });
+      .insert({ name: cleanName, company: cleanCompany });
     if (error) {
       if (error.code === '23505') return { success: false, message: 'Phòng ban này đã tồn tại.' };
       return { success: false, message: error.message };
     }
-    return { success: true, message: `Đã thêm phòng ban "${cleanName}" thành công.` };
+    return { success: true, message: `Đã thêm phòng ban "${cleanName}" thuộc "${cleanCompany}" thành công.` };
   },
 
-  async updateDepartment(oldName, newName) {
+  async updateDepartment(oldName, newName, companyName = 'AHCOM Tổng') {
     const cleanOld = oldName.trim();
     const cleanNew = newName.trim();
+    const cleanCompany = companyName.trim();
     if (!cleanNew) return { success: false, message: 'Tên phòng ban mới không được để trống.' };
     
-    // Update department name
+    // Update department name and company association
     const { error: deptError } = await supabaseClient
       .from('ahcom_departments')
-      .update({ name: cleanNew })
+      .update({ name: cleanNew, company: cleanCompany })
       .eq('name', cleanOld);
     if (deptError) return { success: false, message: deptError.message };
 
@@ -82,21 +148,29 @@ const db = {
   async getValidEmployeeIDs() {
     const { data, error } = await supabaseClient
       .from('ahcom_whitelist')
-      .select('employee_id');
+      .select('employee_id, company, department');
     if (error) {
       console.error("Lỗi getValidEmployeeIDs: ", error);
       return [];
     }
-    return data.map(d => ({ EmployeeID: d.employee_id }));
+    return data.map(d => ({ 
+      EmployeeID: d.employee_id,
+      Company: d.company || 'AHCOM Tổng',
+      Department: d.department || 'Ban Giám Đốc'
+    }));
   },
 
-  async addValidEmployeeID(newEmpId) {
+  async addValidEmployeeID(newEmpId, company = 'AHCOM Tổng', department = 'Ban Giám Đốc') {
     const cleanId = newEmpId.trim().toUpperCase();
     if (!cleanId) return { success: false, message: 'Mã nhân sự không được để trống.' };
 
     const { error } = await supabaseClient
       .from('ahcom_whitelist')
-      .insert({ employee_id: cleanId });
+      .insert({ 
+        employee_id: cleanId,
+        company: company,
+        department: department
+      });
     if (error) {
       if (error.code === '23505') return { success: false, message: 'Mã nhân sự này đã tồn tại.' };
       return { success: false, message: error.message };
@@ -104,8 +178,12 @@ const db = {
     return { success: true, message: `Đã thêm mã nhân sự "${cleanId}" vào whitelist.` };
   },
 
-  async addValidEmployeeIDs(idsArray) {
-    const rows = idsArray.map(id => ({ employee_id: id.trim().toUpperCase() }));
+  async addValidEmployeeIDs(idsArray, company = 'AHCOM Tổng', department = 'Ban Giám Đốc') {
+    const rows = idsArray.map(id => ({ 
+      employee_id: id.trim().toUpperCase(),
+      company: company,
+      department: department
+    }));
     const { error } = await supabaseClient
       .from('ahcom_whitelist')
       .upsert(rows, { onConflict: 'employee_id' });
@@ -113,8 +191,8 @@ const db = {
     return { success: true, message: `Đã nhập thành công ${idsArray.length} mã nhân sự.` };
   },
 
-  async importValidEmployeeIDs(codes) {
-    return await this.addValidEmployeeIDs(codes);
+  async importValidEmployeeIDs(codes, company = 'AHCOM Tổng', department = 'Ban Giám Đốc') {
+    return await this.addValidEmployeeIDs(codes, company, department);
   },
 
   async deleteValidEmployeeID(employeeId) {
@@ -169,7 +247,10 @@ const db = {
       SlideSource: c.slide_source,
       ThumbnailURL: c.thumbnail_url,
       Slides: c.slides || [],
-      QuizQuestions: c.quiz_questions || []
+      QuizQuestions: c.quiz_questions || [],
+      ScopeCompany: c.scope_company || 'All',
+      ScopeDepartment: c.scope_department || 'All',
+      CreatedByUserId: c.created_by_user_id
     }));
   },
 
@@ -185,7 +266,10 @@ const db = {
       slide_source: courseData.SlideSource || 'manual',
       thumbnail_url: courseData.ThumbnailURL || '',
       slides: courseData.Slides || [],
-      quiz_questions: courseData.QuizQuestions || []
+      quiz_questions: courseData.QuizQuestions || [],
+      scope_company: courseData.ScopeCompany || 'All',
+      scope_department: courseData.ScopeDepartment || 'All',
+      created_by_user_id: courseData.CreatedByUserId || null
     };
 
     const { error } = await supabaseClient
@@ -228,22 +312,28 @@ const db = {
       Password: u.password,
       Department: u.department,
       JobLevel: u.job_level,
-      Role: u.role
+      Role: u.role,
+      Company: u.company || 'AHCOM Tổng'
     }));
   },
 
-  async registerUser(fullName, empId, email, password, department, jobLevel) {
+  async registerUser(fullName, empId, email, password, department, jobLevel, company = 'AHCOM Tổng') {
     const cleanEmpId = empId.trim().toUpperCase();
     
     // 1. Verify employee_id exists in whitelist
     const { data: whitelistData, error: wlError } = await supabaseClient
       .from('ahcom_whitelist')
-      .select('employee_id')
+      .select('employee_id, company, department')
       .eq('employee_id', cleanEmpId);
     
     if (wlError || !whitelistData || whitelistData.length === 0) {
       return { success: false, message: 'Mã nhân viên không hợp lệ hoặc không tồn tại trên hệ thống AHCOM. Vui lòng liên hệ phòng HR.' };
     }
+
+    const whitelistItem = whitelistData[0];
+    // Automatically match the user's company and department with the whitelist pre-configured values
+    const finalCompany = whitelistItem.company || company;
+    const finalDepartment = whitelistItem.department || department;
 
     // 2. Check if employee_id already registered
     const { data: existingUser, error: checkError } = await supabaseClient
@@ -271,9 +361,10 @@ const db = {
       employee_id: cleanEmpId,
       email: email.trim().toLowerCase(),
       password: password,
-      department: department,
+      department: finalDepartment,
       job_level: jobLevel,
-      role: 'Student'
+      role: 'Student',
+      company: finalCompany
     };
 
     const { error: regError } = await supabaseClient
@@ -291,7 +382,8 @@ const db = {
         Password: row.password,
         Department: row.department,
         JobLevel: row.job_level,
-        Role: row.role
+        Role: row.role,
+        Company: row.company
       }
     };
   },
@@ -325,7 +417,8 @@ const db = {
         Password: user.password,
         Department: user.department,
         JobLevel: user.job_level,
-        Role: user.role
+        Role: user.role,
+        Company: user.company || 'AHCOM Tổng'
       }
     };
   },
@@ -335,7 +428,8 @@ const db = {
       fullname: updatedData.FullName,
       email: updatedData.Email.trim().toLowerCase(),
       department: updatedData.Department,
-      job_level: updatedData.JobLevel
+      job_level: updatedData.JobLevel,
+      company: updatedData.Company || 'AHCOM Tổng'
     };
     if (updatedData.Password) {
       row.password = updatedData.Password;
@@ -360,7 +454,8 @@ const db = {
         Password: data.password,
         Department: data.department,
         JobLevel: data.job_level,
-        Role: data.role
+        Role: data.role,
+        Company: data.company
       }
     };
   },
@@ -506,6 +601,7 @@ const db = {
         FullName: student.FullName,
         EmployeeID: student.EmployeeID,
         Department: student.Department,
+        Company: student.Company || 'AHCOM Tổng',
         CompletedLessons: completedLessons,
         TotalDuration: totalDuration,
         QuizHistory: quizHistory

@@ -155,9 +155,15 @@
             <input type="password" id="reg-password" class="form-input" placeholder="Nhập mật khẩu từ 6 ký tự" required>
           </div>
           <div class="form-group">
+            <label for="reg-company">Công ty thành viên</label>
+            <select id="reg-company" class="form-input" required>
+              <option value="" disabled selected>Chọn công ty của bạn</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label for="reg-department">Phòng ban làm việc</label>
             <select id="reg-department" class="form-input" required>
-              <option value="" disabled selected>Chọn phòng ban của bạn</option>
+              <option value="" disabled selected>Chọn phòng ban (Chọn công ty trước)</option>
             </select>
           </div>
           <div class="form-group">
@@ -307,6 +313,9 @@
         <button class="admin-tab-btn" id="btn-tab-departments">
           <i class="fa-solid fa-building-user"></i> Quản lý Phòng ban
         </button>
+        <button class="admin-tab-btn" id="btn-tab-companies" style="display: none;">
+          <i class="fa-solid fa-industry"></i> Quản lý Công ty
+        </button>
       </div>
 
       <!-- TAB CONTENT 1: ANALYTICS REPORT -->
@@ -350,6 +359,11 @@
               <!-- Tìm kiếm theo tên hoặc mã -->
               <input type="text" id="admin-search-input" class="form-input table-search-input" placeholder="Tìm tên hoặc mã NV...">
               
+              <!-- Lọc theo công ty -->
+              <select id="admin-company-filter" class="table-filter-select" style="display: none;">
+                <option value="all">Tất cả Công ty</option>
+              </select>
+
               <!-- Lọc theo phòng ban -->
               <select id="admin-dept-filter" class="table-filter-select">
                 <option value="all">Tất cả Phòng ban</option>
@@ -422,6 +436,16 @@
                 <input type="text" id="whitelist-empid-input" class="form-input" placeholder="Ví dụ: AHCOM011" required style="text-transform: uppercase;">
                 <small style="color: var(--text-muted); display: block; margin-top: 6px;">Mã nhân viên nhập vào sẽ được chuẩn hóa thành chữ in hoa.</small>
               </div>
+              <div class="form-group" id="group-whitelist-company-select">
+                <label for="whitelist-company-select">Thuộc công ty</label>
+                <select id="whitelist-company-select" class="form-input" required>
+                </select>
+              </div>
+              <div class="form-group" id="group-whitelist-dept-select">
+                <label for="whitelist-dept-select">Thuộc phòng ban</label>
+                <select id="whitelist-dept-select" class="form-input" required>
+                </select>
+              </div>
               <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: 16px;">
                 <i class="fa-solid fa-user-plus"></i> Thêm vào Whitelist
               </button>
@@ -459,6 +483,8 @@
                     </th>
                     <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
                     <th class="col-empid">Mã nhân viên hợp lệ</th>
+                    <th>Công ty</th>
+                    <th>Phòng ban</th>
                     <th class="col-action" style="width: 110px; text-align: right; padding-right: 24px;">Hành động</th>
                   </tr>
                 </thead>
@@ -482,6 +508,11 @@
                 <label for="department-name-input">Tên phòng ban mới</label>
                 <input type="text" id="department-name-input" class="form-input" placeholder="Ví dụ: Phòng Nghiên cứu và Phát triển" required>
               </div>
+              <div class="form-group" id="group-department-company-select">
+                <label for="department-company-select">Thuộc công ty</label>
+                <select id="department-company-select" class="form-input" required>
+                </select>
+              </div>
               <button type="submit" class="btn btn-primary" style="width: 100%;">
                 <i class="fa-solid fa-folder-plus"></i> Thêm phòng ban
               </button>
@@ -499,11 +530,53 @@
                 <thead>
                   <tr>
                     <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
+                    <th>Công ty</th>
                     <th>Tên phòng ban</th>
                     <th class="col-action" style="width: 160px; text-align: right; padding-right: 24px;">Hành động</th>
                   </tr>
                 </thead>
                 <tbody id="admin-departments-table-body">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 5: COMPANY MANAGEMENT -->
+      <div class="admin-tab-content" id="tab-content-companies">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 32px; align-items: start;">
+          <!-- Left side: Add new company form -->
+          <div class="admin-table-card" style="padding: 24px;">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin-bottom: 16px;">Thêm công ty</h3>
+            <form id="form-add-company">
+              <div class="form-group">
+                <label for="company-name-input">Tên công ty mới</label>
+                <input type="text" id="company-name-input" class="form-input" placeholder="Ví dụ: AHCOM Hà Nội" required>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-plus"></i> Thêm công ty
+              </button>
+            </form>
+          </div>
+
+          <!-- Right side: Companies table -->
+          <div class="admin-table-card">
+            <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin: 0;">Danh sách công ty</h3>
+              <span id="companies-count-badge" class="badge-status passed" style="font-size: 12px;">0 công ty</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
+                    <th>Tên công ty</th>
+                    <th class="col-action" style="width: 160px; text-align: right; padding-right: 24px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-companies-table-body">
                   <!-- Rendered dynamically -->
                 </tbody>
               </table>
@@ -554,6 +627,18 @@
                 <option value="All">Tất cả nhân sự</option>
                 <option value="Staff">Chỉ Nhân viên</option>
                 <option value="Manager">Chỉ Quản lý</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-editor-scope-company">
+              <label for="editor-scope-company">Giới hạn Công ty</label>
+              <select id="editor-scope-company" class="form-input" required>
+                <option value="All">Tất cả công ty</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-editor-scope-department">
+              <label for="editor-scope-department">Giới hạn Phòng ban</label>
+              <select id="editor-scope-department" class="form-input" required>
+                <option value="All">Tất cả phòng ban</option>
               </select>
             </div>
           </div>
@@ -677,6 +762,11 @@
             <label for="editor-user-email">Địa chỉ Email</label>
             <input type="email" id="editor-user-email" class="form-input" required>
           </div>
+          <div class="form-group" id="group-editor-user-company">
+            <label for="editor-user-company">Công ty trực thuộc</label>
+            <select id="editor-user-company" class="form-input" required>
+            </select>
+          </div>
           <div class="form-group">
             <label for="editor-user-dept">Phòng ban làm việc</label>
             <select id="editor-user-dept" class="form-input" required>
@@ -724,6 +814,11 @@
           <div class="form-group">
             <label for="profile-email">Địa chỉ Email</label>
             <input type="email" id="profile-email" class="form-input" required>
+          </div>
+          <div class="form-group" id="group-profile-company">
+            <label for="profile-company">Công ty trực thuộc</label>
+            <select id="profile-company" class="form-input" disabled style="background-color: #e9ecef; cursor: not-allowed;">
+            </select>
           </div>
           <div class="form-group">
             <label for="profile-dept">Phòng ban làm việc</label>
