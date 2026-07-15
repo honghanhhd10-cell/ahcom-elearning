@@ -453,9 +453,11 @@ const db = {
       email: updatedData.Email.trim().toLowerCase(),
       department: updatedData.Department,
       job_level: updatedData.JobLevel,
-      company: updatedData.Company || 'AHCOM Tổng',
-      role: updatedData.Role || 'Student'
+      company: updatedData.Company || 'AHCOM Tổng'
     };
+    if (updatedData.Role !== undefined) {
+      row.role = updatedData.Role;
+    }
     if (updatedData.Password) {
       row.password = updatedData.Password;
     }
