@@ -2654,15 +2654,93 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       tr.querySelector('.btn-edit-dept').addEventListener('click', async () => {
-        el.editorDeptOldName.value = dept.name;
-        el.editorDeptOldCompany.value = dept.company;
-        el.editorDeptName.value = dept.name;
-        
-        // Load static dropdown choices
-        await renderCompanyDropdowns();
-        el.editorDeptCompany.value = dept.company;
-        
-        el.modalDeptEditor.classList.add('active');
+        // Dynamically create department editor modal if it doesn't exist yet
+        let modal = document.getElementById('modal-dept-editor');
+        if (!modal) {
+          modal = document.createElement('div');
+          modal.id = 'modal-dept-editor';
+          modal.className = 'modal-backdrop';
+          modal.innerHTML = `
+            <div class="modal-card" style="max-width: 450px;">
+              <div class="modal-header">
+                <h3><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa Phòng ban</h3>
+                <button class="close-modal-btn" id="btn-close-dept-modal">&times;</button>
+              </div>
+              <form id="form-dept-editor">
+                <div class="modal-body">
+                  <input type="hidden" id="editor-dept-old-name">
+                  <input type="hidden" id="editor-dept-old-company">
+                  <div class="form-group">
+                    <label for="editor-dept-name">Tên phòng ban</label>
+                    <input type="text" id="editor-dept-name" class="form-input" required>
+                  </div>
+                  <div class="form-group">
+                    <label for="editor-dept-company">Thuộc công ty</label>
+                    <select id="editor-dept-company" class="form-input" required></select>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-secondary" id="btn-cancel-dept-modal">Hủy bỏ</button>
+                  <button type="submit" class="btn btn-success">
+                    <i class="fa-solid fa-floppy-disk"></i> Lưu thay đổi
+                  </button>
+                </div>
+              </form>
+            </div>
+          `;
+          document.body.appendChild(modal);
+
+          // Bind close buttons
+          modal.querySelector('#btn-close-dept-modal').addEventListener('click', () => modal.classList.remove('active'));
+          modal.querySelector('#btn-cancel-dept-modal').addEventListener('click', () => modal.classList.remove('active'));
+
+          // Bind form submit
+          modal.querySelector('#form-dept-editor').addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const oldName = document.getElementById('editor-dept-old-name').value;
+            const oldCompany = document.getElementById('editor-dept-old-company').value;
+            const newName = document.getElementById('editor-dept-name').value.trim();
+            const newCompany = document.getElementById('editor-dept-company').value;
+
+            if (!newName) {
+              showToast('Tên phòng ban không được để trống.', 'danger');
+              return;
+            }
+
+            const result = await window.ahcomDB.updateDepartment(oldName, newName, oldCompany, newCompany);
+            if (result.success) {
+              showToast(result.message, 'success');
+              modal.classList.remove('active');
+              await renderDepartmentDropdowns();
+              await renderAdminDepartmentsTable();
+              if (state.currentView === 'view-admin-dashboard') {
+                await renderAdminDashboard();
+              }
+            } else {
+              showToast(result.message, 'danger');
+            }
+          });
+        }
+
+        // Fill in current values
+        document.getElementById('editor-dept-old-name').value = dept.name;
+        document.getElementById('editor-dept-old-company').value = dept.company;
+        document.getElementById('editor-dept-name').value = dept.name;
+
+        // Populate company dropdown
+        const companies = await window.ahcomDB.getCompanies();
+        const selectEl = document.getElementById('editor-dept-company');
+        selectEl.innerHTML = '';
+        companies.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          selectEl.appendChild(opt);
+        });
+        selectEl.value = dept.company;
+
+        // Show modal
+        modal.classList.add('active');
       });
 
       tr.querySelector('.btn-delete-dept').addEventListener('click', async () => {
@@ -2682,41 +2760,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       el.adminDepartmentsTableBody.appendChild(tr);
-    });
-  }
-
-  // Close and Submit controllers for modal-dept-editor (Native Dropdown)
-  if (el.btnCloseDeptModal) {
-    el.btnCloseDeptModal.addEventListener('click', () => el.modalDeptEditor.classList.remove('active'));
-  }
-  if (el.btnCancelDeptModal) {
-    el.btnCancelDeptModal.addEventListener('click', () => el.modalDeptEditor.classList.remove('active'));
-  }
-  if (el.formDeptEditor) {
-    el.formDeptEditor.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const oldName = el.editorDeptOldName.value;
-      const oldCompany = el.editorDeptOldCompany.value;
-      const newName = el.editorDeptName.value.trim();
-      const newCompany = el.editorDeptCompany.value;
-
-      if (!newName) {
-        showToast('Tên phòng ban không được để trống.', 'danger');
-        return;
-      }
-
-      const result = await window.ahcomDB.updateDepartment(oldName, newName, oldCompany, newCompany);
-      if (result.success) {
-        showToast(result.message, 'success');
-        el.modalDeptEditor.classList.remove('active');
-        await renderDepartmentDropdowns();
-        await renderAdminDepartmentsTable();
-        if (state.currentView === 'view-admin-dashboard') {
-          await renderAdminDashboard();
-        }
-      } else {
-        showToast(result.message, 'danger');
-      }
     });
   }
 
