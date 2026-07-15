@@ -184,7 +184,17 @@ document.addEventListener('DOMContentLoaded', () => {
     profileCompany: document.getElementById('profile-company'),
     profileDept: document.getElementById('profile-dept'),
     profileJobLevel: document.getElementById('profile-joblevel'),
-    profilePassword: document.getElementById('profile-password')
+    profilePassword: document.getElementById('profile-password'),
+
+    // Department editor modal references
+    modalDeptEditor: document.getElementById('modal-dept-editor'),
+    btnCloseDeptModal: document.getElementById('btn-close-dept-modal'),
+    btnCancelDeptModal: document.getElementById('btn-cancel-dept-modal'),
+    formDeptEditor: document.getElementById('form-dept-editor'),
+    editorDeptOldName: document.getElementById('editor-dept-old-name'),
+    editorDeptOldCompany: document.getElementById('editor-dept-old-company'),
+    editorDeptName: document.getElementById('editor-dept-name'),
+    editorDeptCompany: document.getElementById('editor-dept-company')
   };
 
   // --- TOAST NOTIFICATIONS ---
@@ -2494,6 +2504,7 @@ document.addEventListener('DOMContentLoaded', () => {
     fillSelect(el.editorScopeCompany, 'Tất cả');
     fillSelect(el.editorUserCompany, 'Chọn công ty');
     fillSelect(el.profileCompany, 'Chọn công ty');
+    fillSelect(el.editorDeptCompany, 'Chọn công ty');
   }
 
   // Dynamic department dropdown population (filtered by parent company selection)
@@ -2643,40 +2654,15 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
 
       tr.querySelector('.btn-edit-dept').addEventListener('click', async () => {
-        const newName = prompt(`Nhập tên mới cho phòng ban "${dept.name}" (hoặc bấm OK để giữ nguyên):`, dept.name);
-        if (newName === null) return;
+        el.editorDeptOldName.value = dept.name;
+        el.editorDeptOldCompany.value = dept.company;
+        el.editorDeptName.value = dept.name;
         
-        const cleanName = newName.trim();
-        if (!cleanName) {
-          showToast('Tên phòng ban không được để trống.', 'danger');
-          return;
-        }
-
-        // Fetch list of companies to display in prompt
-        const companies = await window.ahcomDB.getCompanies();
-        const newCompany = prompt(
-          `Nhập tên công ty mới cho phòng ban này (hoặc bấm OK để giữ nguyên "${dept.company}").\nCác công ty hiện có:\n- ${companies.join('\n- ')}`, 
-          dept.company
-        );
-        if (newCompany === null) return;
-
-        const cleanCompany = newCompany.trim();
-        if (!companies.includes(cleanCompany)) {
-          showToast(`Tên công ty "${cleanCompany}" không tồn tại trên hệ thống.`, 'danger');
-          return;
-        }
-
-        const result = await window.ahcomDB.updateDepartment(dept.name, cleanName, dept.company, cleanCompany);
-        if (result.success) {
-          showToast(result.message, 'success');
-          await renderDepartmentDropdowns();
-          await renderAdminDepartmentsTable();
-          if (state.currentView === 'view-admin-dashboard') {
-            await renderAdminDashboard();
-          }
-        } else {
-          showToast(result.message, 'danger');
-        }
+        // Load static dropdown choices
+        await renderCompanyDropdowns();
+        el.editorDeptCompany.value = dept.company;
+        
+        el.modalDeptEditor.classList.add('active');
       });
 
       tr.querySelector('.btn-delete-dept').addEventListener('click', async () => {
@@ -2696,6 +2682,41 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       el.adminDepartmentsTableBody.appendChild(tr);
+    });
+  }
+
+  // Close and Submit controllers for modal-dept-editor (Native Dropdown)
+  if (el.btnCloseDeptModal) {
+    el.btnCloseDeptModal.addEventListener('click', () => el.modalDeptEditor.classList.remove('active'));
+  }
+  if (el.btnCancelDeptModal) {
+    el.btnCancelDeptModal.addEventListener('click', () => el.modalDeptEditor.classList.remove('active'));
+  }
+  if (el.formDeptEditor) {
+    el.formDeptEditor.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const oldName = el.editorDeptOldName.value;
+      const oldCompany = el.editorDeptOldCompany.value;
+      const newName = el.editorDeptName.value.trim();
+      const newCompany = el.editorDeptCompany.value;
+
+      if (!newName) {
+        showToast('Tên phòng ban không được để trống.', 'danger');
+        return;
+      }
+
+      const result = await window.ahcomDB.updateDepartment(oldName, newName, oldCompany, newCompany);
+      if (result.success) {
+        showToast(result.message, 'success');
+        el.modalDeptEditor.classList.remove('active');
+        await renderDepartmentDropdowns();
+        await renderAdminDepartmentsTable();
+        if (state.currentView === 'view-admin-dashboard') {
+          await renderAdminDashboard();
+        }
+      } else {
+        showToast(result.message, 'danger');
+      }
     });
   }
 
