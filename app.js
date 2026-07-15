@@ -287,6 +287,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- AUTHENTICATION ACTIONS ---
   
+  // Toggle Login Password Show/Hide
+  const btnToggleLoginPassword = document.getElementById('btn-toggle-login-password');
+  if (btnToggleLoginPassword) {
+    btnToggleLoginPassword.addEventListener('click', () => {
+      const passwordInput = document.getElementById('login-password');
+      const icon = btnToggleLoginPassword.querySelector('i');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
+  }
+
   // Submit Login
   el.formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -325,12 +343,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const empId = el.regEmpId.value;
     const email = el.regEmail.value;
     const password = el.regPassword.value;
+    const confirmPassword = document.getElementById('reg-confirm-password').value;
     const company = el.regCompany.value;
     const department = el.regDept.value;
     const jobLevel = el.regJobLevel.value;
 
     if (password.length < 6) {
       showToast('Mật khẩu phải chứa ít nhất 6 ký tự.', 'danger');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      showToast('Mật khẩu và xác nhận mật khẩu không khớp.', 'danger');
       return;
     }
 
@@ -2269,6 +2293,8 @@ document.addEventListener('DOMContentLoaded', () => {
     el.editorUserJobLevel.value = user.JobLevel || 'Staff';
     el.editorUserRole.value = user.Role || 'Student';
     el.editorUserPassword.value = ''; // Leave blank initially
+    const confirmInput = document.getElementById('editor-user-confirm-password');
+    if (confirmInput) confirmInput.value = '';
 
     // Disable company and role selection for CompanyAdmin / DeptAdmin in user editor modal
     const role = state.currentUser.Role;
@@ -2301,6 +2327,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const jobLevel = el.editorUserJobLevel.value;
     const accountRole = el.editorUserRole.value;
     const password = el.editorUserPassword.value.trim();
+    const confirmPasswordInput = document.getElementById('editor-user-confirm-password');
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value.trim() : '';
 
     const updatedData = {
       FullName: fullName,
@@ -2315,6 +2343,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (password) {
       if (password.length < 6) {
         showToast('Mật khẩu mới phải có ít nhất 6 ký tự.', 'danger');
+        return;
+      }
+      if (password !== confirmPassword) {
+        showToast('Xác nhận mật khẩu mới không khớp.', 'danger');
         return;
       }
       updatedData.Password = password;
@@ -2352,6 +2384,8 @@ document.addEventListener('DOMContentLoaded', () => {
     el.profileDept.value = user.Department || 'Phòng Kinh doanh';
     el.profileJobLevel.value = user.JobLevel || 'Staff';
     el.profilePassword.value = ''; // Leave blank initially
+    const confirmInput = document.getElementById('profile-confirm-password');
+    if (confirmInput) confirmInput.value = '';
 
     el.modalProfileEditor.classList.add('active');
   }
@@ -2380,6 +2414,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const department = el.profileDept.value;
     const jobLevel = el.profileJobLevel.value;
     const password = el.profilePassword.value.trim();
+    const confirmPasswordInput = document.getElementById('profile-confirm-password');
+    const confirmPassword = confirmPasswordInput ? confirmPasswordInput.value.trim() : '';
 
     const updatedData = {
       FullName: fullName,
@@ -2392,6 +2428,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (password) {
       if (password.length < 6) {
         showToast('Mật khẩu mới phải có ít nhất 6 ký tự.', 'danger');
+        return;
+      }
+      if (password !== confirmPassword) {
+        showToast('Xác nhận mật khẩu mới không khớp.', 'danger');
         return;
       }
       updatedData.Password = password;
