@@ -209,7 +209,15 @@ document.addEventListener('DOMContentLoaded', () => {
     editorDeptOldName: document.getElementById('editor-dept-old-name'),
     editorDeptOldCompany: document.getElementById('editor-dept-old-company'),
     editorDeptName: document.getElementById('editor-dept-name'),
-    editorDeptCompany: document.getElementById('editor-dept-company')
+    editorDeptCompany: document.getElementById('editor-dept-company'),
+
+    // Category management references
+    btnTabCategories: document.getElementById('btn-tab-categories'),
+    tabContentCategories: document.getElementById('tab-content-categories'),
+    formAddCategory: document.getElementById('form-add-category'),
+    categoryNameInput: document.getElementById('category-name-input'),
+    adminCategoriesTableBody: document.getElementById('admin-categories-table-body'),
+    categoriesCountBadge: document.getElementById('categories-count-badge')
   };
 
   // --- TOAST NOTIFICATIONS ---
@@ -449,6 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set welcome text
     document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Company || 'AHCOM Tổng'} - ${state.currentUser.Department})</span>`;
     
+    await renderCategoryFilters();
     const courses = await window.ahcomDB.getCourses();
     const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
     const quizResults = await window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
@@ -515,10 +524,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // Format category label
-      let categoryName = 'Hội nhập';
-      if (course.Category === 'Sales') categoryName = 'Kinh doanh / Bán hàng';
-      else if (course.Category === 'DISC') categoryName = 'Mô hình tính cách DISC';
-      else if (course.Category === 'HR') categoryName = 'Văn hóa & Quy chế';
+      let categoryName = course.Category || 'Khóa học';
 
       // Check access restrictions (RBAC)
       const userRole = state.currentUser.Role;
@@ -1461,8 +1467,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Open Modal Course Editor
-  function openCourseEditorModal(course = null) {
+  async function openCourseEditorModal(course = null) {
     el.formCourseEditor.reset();
+    await renderCategoryDropdowns();
     el.editorSlidesList.innerHTML = '';
     el.editorQuestionsList.innerHTML = '';
     el.editorSlideUrl.value = '';
@@ -2560,6 +2567,50 @@ document.addEventListener('DOMContentLoaded', () => {
     fillDeptSelect(el.editorScopeDepartment, el.editorScopeCompany ? el.editorScopeCompany.value : null, 'Tất cả');
   }
 
+  // Dynamic category dropdown population for Course Editor Modal
+  async function renderCategoryDropdowns() {
+    if (!el.editorCategory) return;
+    const categories = await window.ahcomDB.getCategories();
+    const currentVal = el.editorCategory.value;
+
+    el.editorCategory.innerHTML = '';
+    categories.forEach(cat => {
+      const opt = document.createElement('option');
+      opt.value = cat;
+      opt.textContent = cat;
+      el.editorCategory.appendChild(opt);
+    });
+
+    if (currentVal && categories.includes(currentVal)) {
+      el.editorCategory.value = currentVal;
+    }
+  }
+
+  // Dynamic category filter pills population for Student Dashboard
+  async function renderCategoryFilters() {
+    if (!el.courseCategoryFilters) return;
+    const categories = await window.ahcomDB.getCategories();
+    
+    const activeBtn = el.courseCategoryFilters.querySelector('.filter-btn.active');
+    const currentActive = activeBtn ? activeBtn.dataset.category : 'all';
+
+    el.courseCategoryFilters.innerHTML = '';
+    
+    const allBtn = document.createElement('button');
+    allBtn.className = `filter-btn ${currentActive === 'all' ? 'active' : ''}`;
+    allBtn.dataset.category = 'all';
+    allBtn.textContent = 'Tất cả';
+    el.courseCategoryFilters.appendChild(allBtn);
+
+    categories.forEach(cat => {
+      const btn = document.createElement('button');
+      btn.className = `filter-btn ${currentActive === cat ? 'active' : ''}`;
+      btn.dataset.category = cat;
+      btn.textContent = cat;
+      el.courseCategoryFilters.appendChild(btn);
+    });
+  }
+
   // Bind change event listeners for dynamic nested department selections
   if (el.regCompany) el.regCompany.addEventListener('change', () => renderDepartmentDropdowns());
   if (el.profileCompany) el.profileCompany.addEventListener('change', () => renderDepartmentDropdowns());
@@ -2818,10 +2869,96 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Draw Categories tab table
+  async function renderAdminCategoriesTable() {
+    const categories = await window.ahcomDB.getCategories();
+    if (el.categoriesCountBadge) {
+      el.categoriesCountBadge.textContent = `${categories.length} phân loại`;
+    }
+    if (!el.adminCategoriesTableBody) return;
+    el.adminCategoriesTableBody.innerHTML = '';
+
+    categories.forEach((cat, idx) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td class="col-stt" style="text-align: center;">${idx + 1}</td>
+        <td style="font-weight: 500;">${cat}</td>
+        <td class="col-action" style="text-align: right; padding-right: 24px;">
+          <button class="btn btn-secondary btn-edit-category" style="padding: 6px 12px; font-size:12px; margin-right: 6px;">
+            <i class="fa-solid fa-pen-to-square"></i> Đổi tên
+          </button>
+          <button class="btn btn-secondary btn-delete-category" style="padding: 6px 12px; font-size:12px; background-color: var(--danger); color: white;">
+            <i class="fa-solid fa-trash-can"></i> Xóa
+          </button>
+        </td>
+      `;
+
+      tr.querySelector('.btn-edit-category').addEventListener('click', async () => {
+        const newName = prompt(`Nhập tên mới cho phân loại "${cat}":`, cat);
+        if (newName === null) return;
+        const cleanName = newName.trim();
+        if (!cleanName) {
+          showToast('Tên phân loại không được để trống.', 'danger');
+          return;
+        }
+
+        const result = await window.ahcomDB.updateCategory(cat, cleanName);
+        if (result.success) {
+          showToast(result.message, 'success');
+          await renderCategoryDropdowns();
+          await renderCategoryFilters();
+          await renderAdminCategoriesTable();
+          await renderAdminCoursesTable();
+          if (state.currentView === 'view-student-dashboard') {
+            await renderStudentDashboard();
+          }
+        } else {
+          showToast(result.message, 'danger');
+        }
+      });
+
+      tr.querySelector('.btn-delete-category').addEventListener('click', async () => {
+        if (confirm(`Bạn có chắc chắn muốn xóa phân loại "${cat}"?`)) {
+          const result = await window.ahcomDB.deleteCategory(cat);
+          if (result.success) {
+            showToast(result.message, 'success');
+            await renderCategoryDropdowns();
+            await renderCategoryFilters();
+            await renderAdminCategoriesTable();
+          } else {
+            showToast(result.message, 'danger');
+          }
+        }
+      });
+
+      el.adminCategoriesTableBody.appendChild(tr);
+    });
+  }
+
+  // Handle Add Category submit
+  if (el.formAddCategory) {
+    el.formAddCategory.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newCatName = el.categoryNameInput.value.trim();
+      if (!newCatName) return;
+
+      const result = await window.ahcomDB.addCategory(newCatName);
+      if (result.success) {
+        showToast(result.message, 'success');
+        el.categoryNameInput.value = '';
+        await renderCategoryDropdowns();
+        await renderCategoryFilters();
+        await renderAdminCategoriesTable();
+      } else {
+        showToast(result.message, 'danger');
+      }
+    });
+  }
+
   // Tab controller helper (NEW)
   function switchTab(activeTabBtn, activeTabContent, loadCallback = null) {
-    const tabBtns = [el.btnTabAnalytics, el.btnTabCourses, el.btnTabWhitelist, el.btnTabDepartments, el.btnTabCompanies];
-    const tabContents = [el.tabContentAnalytics, el.tabContentCourses, el.tabContentWhitelist, el.tabContentDepartments, el.tabContentCompanies];
+    const tabBtns = [el.btnTabAnalytics, el.btnTabCourses, el.btnTabWhitelist, el.btnTabDepartments, el.btnTabCompanies, el.btnTabCategories];
+    const tabContents = [el.tabContentAnalytics, el.tabContentCourses, el.tabContentWhitelist, el.tabContentDepartments, el.tabContentCompanies, el.tabContentCategories];
 
     tabBtns.forEach(btn => { if (btn) btn.classList.remove('active'); });
     tabContents.forEach(content => { if (content) content.classList.remove('active'); });
@@ -2841,11 +2978,16 @@ document.addEventListener('DOMContentLoaded', () => {
   if (el.btnTabCompanies) {
     el.btnTabCompanies.addEventListener('click', () => switchTab(el.btnTabCompanies, el.tabContentCompanies, renderAdminCompaniesTable));
   }
+  if (el.btnTabCategories) {
+    el.btnTabCategories.addEventListener('click', () => switchTab(el.btnTabCategories, el.tabContentCategories, renderAdminCategoriesTable));
+  }
 
   // Initial load of static dropdown parameters
   (async () => {
     await renderCompanyDropdowns();
     await renderDepartmentDropdowns();
+    await renderCategoryDropdowns();
+    await renderCategoryFilters();
   })().catch(err => console.error(err));
 
 

@@ -325,6 +325,9 @@
         <button class="admin-tab-btn" id="btn-tab-companies" style="display: none;">
           <i class="fa-solid fa-industry"></i> Quản lý Công ty
         </button>
+        <button class="admin-tab-btn" id="btn-tab-categories">
+          <i class="fa-solid fa-tags"></i> Quản lý Phân loại
+        </button>
       </div>
 
       <!-- TAB CONTENT 1: ANALYTICS REPORT -->
@@ -586,6 +589,47 @@
                   </tr>
                 </thead>
                 <tbody id="admin-companies-table-body">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 6: CATEGORY MANAGEMENT -->
+      <div class="admin-tab-content" id="tab-content-categories">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 32px; align-items: start;">
+          <!-- Left side: Add new category form -->
+          <div class="admin-table-card" style="padding: 24px;">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin-bottom: 16px;">Thêm phân loại mới</h3>
+            <form id="form-add-category">
+              <div class="form-group">
+                <label for="category-name-input">Tên phân loại khóa học</label>
+                <input type="text" id="category-name-input" class="form-input" placeholder="Ví dụ: Kỹ năng Bán hàng" required>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-plus"></i> Thêm phân loại
+              </button>
+            </form>
+          </div>
+
+          <!-- Right side: Categories table -->
+          <div class="admin-table-card">
+            <div class="table-toolbar" style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin: 0;">Danh sách phân loại khóa học</h3>
+              <span id="categories-count-badge" class="badge-status passed" style="font-size: 12px;">0 phân loại</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th class="col-stt" style="width: 60px; text-align: center;">STT</th>
+                    <th>Tên phân loại</th>
+                    <th class="col-action" style="width: 160px; text-align: right; padding-right: 24px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-categories-table-body">
                   <!-- Rendered dynamically -->
                 </tbody>
               </table>
@@ -921,10 +965,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=6"></script>
+  <script src="db.js?v=7"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 
 </body>
 </html>

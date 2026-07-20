@@ -10,6 +10,81 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const db = {
+  // --- CATEGORIES / PHÂN LOẠI KHÓA HỌC CRUD ---
+  async getCategories() {
+    const { data, error } = await supabaseClient
+      .from('ahcom_categories')
+      .select('name')
+      .order('id', { ascending: true });
+    if (error || !data || data.length === 0) {
+      // Fallback default list if table doesn't exist yet
+      return ['Kỹ năng Bán hàng', 'Mô hình DISC', 'Hội nhập & Quy chế'];
+    }
+    return data.map(c => c.name);
+  },
+
+  async addCategory(categoryName) {
+    const cleanName = categoryName.trim();
+    if (!cleanName) return { success: false, message: 'Tên phân loại không được để trống.' };
+
+    const { error } = await supabaseClient
+      .from('ahcom_categories')
+      .insert({ name: cleanName });
+
+    if (error) {
+      if (error.code === '23505') return { success: false, message: 'Phân loại này đã tồn tại.' };
+      return { success: false, message: error.message };
+    }
+    return { success: true, message: `Đã thêm phân loại "${cleanName}" thành công.` };
+  },
+
+  async updateCategory(oldName, newName) {
+    const cleanOld = oldName.trim();
+    const cleanNew = newName.trim();
+    if (!cleanNew) return { success: false, message: 'Tên phân loại mới không được để trống.' };
+
+    // Update in ahcom_categories table
+    const { error: catError } = await supabaseClient
+      .from('ahcom_categories')
+      .update({ name: cleanNew })
+      .eq('name', cleanOld);
+
+    if (catError && catError.code === '23505') {
+      return { success: false, message: 'Tên phân loại này đã tồn tại.' };
+    }
+
+    // Cascade update category on existing courses in ahcom_courses
+    await supabaseClient
+      .from('ahcom_courses')
+      .update({ category: cleanNew })
+      .eq('category', cleanOld);
+
+    return { success: true, message: `Đã cập nhật tên phân loại thành "${cleanNew}" thành công.` };
+  },
+
+  async deleteCategory(categoryName) {
+    const cleanName = categoryName.trim();
+
+    // Check if courses are using this category
+    const { data: courses } = await supabaseClient
+      .from('ahcom_courses')
+      .select('course_id')
+      .eq('category', cleanName)
+      .limit(1);
+
+    if (courses && courses.length > 0) {
+      return { success: false, message: `Không thể xóa phân loại "${cleanName}" do đang có khóa học thuộc phân loại này.` };
+    }
+
+    const { error } = await supabaseClient
+      .from('ahcom_categories')
+      .delete()
+      .eq('name', cleanName);
+
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: `Đã xóa phân loại "${cleanName}" thành công.` };
+  },
+
   // --- COMPANIES CRUD (NEW) ---
   async getCompanies() {
     const { data, error } = await supabaseClient
