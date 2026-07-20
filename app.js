@@ -2674,9 +2674,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!modal) {
           modal = document.createElement('div');
           modal.id = 'modal-dept-editor';
-          modal.className = 'modal-backdrop';
+          modal.className = 'modal-overlay';
           modal.innerHTML = `
-            <div class="modal-card" style="max-width: 450px;">
+            <div class="modal-container" style="max-width: 450px;">
               <div class="modal-header">
                 <h3><i class="fa-solid fa-pen-to-square"></i> Chỉnh sửa Phòng ban</h3>
                 <button class="close-modal-btn" id="btn-close-dept-modal">&times;</button>
