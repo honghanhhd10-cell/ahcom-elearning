@@ -413,6 +413,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Logout
   el.btnLogout.addEventListener('click', () => {
+    if (state.watchTimer) {
+      clearInterval(state.watchTimer);
+      state.watchTimer = null;
+    }
     state.currentUser = null;
     sessionStorage.removeItem('ahcom_session');
     showToast('Bạn đã đăng xuất khỏi hệ thống.', 'warning');
@@ -745,6 +749,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasAnnouncedCompletion = false;
     
     state.watchTimer = setInterval(() => {
+      if (!state.currentUser) {
+        clearInterval(state.watchTimer);
+        state.watchTimer = null;
+        return;
+      }
       currentSeconds++;
       const isCompleted = currentSeconds >= 15;
       
@@ -859,6 +868,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set listener to update watch progress automatically
     let lastSavedTime = 0;
     video.addEventListener('timeupdate', () => {
+      if (!state.currentUser) return;
       const currentTime = Math.round(video.currentTime);
       
       // Avoid excessive writes to localStorage. Save every 2 seconds or when video finishes
