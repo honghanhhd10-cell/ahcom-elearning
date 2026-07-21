@@ -805,6 +805,18 @@ const db = {
         request.onsuccess = () => resolve(true);
         request.onerror = (e) => reject(e.target.error);
       });
+    },
+
+    async saveDocument(courseId, blob) {
+      return this.saveVideo(courseId, blob);
+    },
+
+    async getDocument(courseId) {
+      return this.getVideo(courseId);
+    },
+
+    async deleteDocument(courseId) {
+      return this.deleteVideo(courseId);
     }
   }
 };

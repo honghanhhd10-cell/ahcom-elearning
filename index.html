@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=12">
+  <link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
 
@@ -748,6 +748,17 @@
           <div class="form-group" id="editor-group-slide-url" style="display: none;">
             <label for="editor-slide-url">Đường dẫn tài liệu Slide (Hỗ trợ Google Slides, PDF, Google Docs hoặc Link Web)</label>
             <input type="url" id="editor-slide-url" class="form-input" placeholder="Nhập đường dẫn tài liệu Slide, ví dụ: https://docs.google.com/presentation/d/.../edit">
+            <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <span style="font-size: 13px; color: var(--text-muted);">Hoặc</span>
+              <input type="file" id="editor-pdf-file-input" accept="application/pdf" style="display: none;">
+              <button type="button" class="btn btn-secondary" id="btn-upload-pdf" style="padding: 6px 12px; font-size: 12px;">
+                <i class="fa-solid fa-file-pdf" style="color: #e53e3e;"></i> Chọn tệp PDF từ máy tính
+              </button>
+              <span id="editor-pdf-file-name" style="font-size: 13px; font-weight: 600; color: var(--success); display: none;"></span>
+              <button type="button" class="btn btn-secondary" id="btn-remove-pdf-file" style="padding: 4px 8px; font-size: 11px; color: var(--danger); display: none; border-color: var(--danger); background: none;">
+                Xóa file
+              </button>
+            </div>
           </div>
 
           <!-- Khối nhập Slide deck (Ẩn nếu chọn Video) -->
@@ -965,10 +976,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=12"></script>
+  <script src="db.js?v=13"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=12"></script>
+  <script src="app.js?v=13"></script>
 
 </body>
 </html>
