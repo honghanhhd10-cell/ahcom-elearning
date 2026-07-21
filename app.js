@@ -869,21 +869,46 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderSlideViewer(course, initialSeconds) {
     if (course.SlideSource === 'link' || course.ContentURL) {
       // LINK SOURCE SLIDES
-      const embedUrl = getEmbedUrl(course.ContentURL);
-      
-      el.learningMediaContainer.innerHTML = `
-        <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; height: 500px;">
-          <iframe src="${embedUrl}" style="width: 100%; height: 420px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" allowfullscreen></iframe>
-          <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
-            <a href="${course.ContentURL}" target="_blank" class="btn btn-secondary btn-open-external" style="display: inline-flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu trong Tab mới
-            </a>
-            <button class="btn btn-success btn-confirm-completed" style="display: inline-flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
-            </button>
+      const rawUrl = course.ContentURL || '';
+      const isFolderOrMyDrive = rawUrl.includes('drive.google.com/drive/my-drive') || 
+                                rawUrl.includes('drive.google.com/drive/u/') || 
+                                rawUrl.includes('drive.google.com/drive/folders');
+
+      if (isFolderOrMyDrive) {
+        el.learningMediaContainer.innerHTML = `
+          <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; background: #F8FAFC; color: #1E293B; padding: 40px; text-align: center; border-radius: var(--radius-md); height: 480px;">
+            <i class="fa-brands fa-google-drive" style="font-size: 64px; color: #34A853; margin-bottom: 8px;"></i>
+            <h3 style="font-size: 22px; font-weight: 700; color: var(--primary); margin: 0;">Thư mục Tài liệu Google Drive</h3>
+            <p style="color: var(--text-muted); max-width: 550px; font-size: 14px; margin: 8px 0 20px 0; line-height: 1.5;">
+              Google bảo mật cấm hiển thị trực tiếp Thư mục Google Drive cá nhân trong khung xem nhỏ. 
+              Vui lòng bấm nút bên dưới để mở tài liệu bài giảng trong Tab mới.
+            </p>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
+              <a href="${rawUrl}" target="_blank" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 600;">
+                <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu Google Drive
+              </a>
+              <button class="btn btn-success btn-confirm-completed" style="padding: 12px 24px; font-size: 15px; font-weight: 600;">
+                <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
+              </button>
+            </div>
           </div>
-        </div>
-      `;
+        `;
+      } else {
+        const embedUrl = getEmbedUrl(rawUrl);
+        el.learningMediaContainer.innerHTML = `
+          <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; height: 500px;">
+            <iframe src="${embedUrl}" style="width: 100%; height: 420px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" allowfullscreen></iframe>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+              <a href="${rawUrl}" target="_blank" class="btn btn-secondary btn-open-external" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu trong Tab mới
+              </a>
+              <button class="btn btn-success btn-confirm-completed" style="display: inline-flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
+              </button>
+            </div>
+          </div>
+        `;
+      }
 
       // Bind confirm complete click
       el.learningMediaContainer.querySelector('.btn-confirm-completed').addEventListener('click', () => {
