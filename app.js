@@ -150,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editorCategory: document.getElementById('editor-category'),
     editorContentType: document.getElementById('editor-content-type'),
     editorTargetGroup: document.getElementById('editor-target-group'),
+    editorIsHidden: document.getElementById('editor-is-hidden'),
     editorScopeCompany: document.getElementById('editor-scope-company'),
     editorScopeDepartment: document.getElementById('editor-scope-department'),
     editorGroupSlideSource: document.getElementById('editor-group-slide-source'),
@@ -489,6 +490,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const deptMatch = course.ScopeDepartment === 'All' || course.ScopeDepartment === userDept;
         return compMatch && deptMatch;
       });
+    }
+
+    // Hide courses where IsHidden === true for regular students
+    if (state.currentUser.Role === 'Student') {
+      filteredCourses = filteredCourses.filter(course => !course.IsHidden);
     }
 
     if (selectedCategory !== 'all') {
@@ -1504,15 +1510,26 @@ document.addEventListener('DOMContentLoaded', () => {
     courses.forEach(course => {
       const quizCount = course.QuizQuestions ? course.QuizQuestions.length : 0;
       const typeLabel = course.ContentType === 'Video' ? '<i class="fa-solid fa-video"></i> Video' : '<i class="fa-solid fa-file-powerpoint"></i> Slides';
+      const visibilityBadge = course.IsHidden
+        ? '<span class="badge-status pending" style="background:#FFFBEB; color:#D97706; border:1px solid #FCD34D; font-size:11px;"><i class="fa-solid fa-eye-slash"></i> Đã ẩn</span>'
+        : '<span class="badge-status passed" style="background:#ECFDF5; color:#059669; border:1px solid #6EE7B7; font-size:11px;"><i class="fa-solid fa-eye"></i> Hiển thị</span>';
       
       const tr = document.createElement('tr');
       tr.innerHTML = `
-        <td><strong>${course.Title}</strong></td>
+        <td>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <strong>${course.Title}</strong>
+            ${visibilityBadge}
+          </div>
+        </td>
         <td><code>${course.Category}</code></td>
         <td>${typeLabel}</td>
         <td style="font-weight:600;">${quizCount} câu hỏi</td>
         <td style="text-align: right; padding-right:24px;">
-          <button class="btn btn-secondary btn-edit-course" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px; margin-right:8px;">
+          <button class="btn btn-secondary btn-toggle-visibility" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px; margin-right:6px;">
+            <i class="fa-solid ${course.IsHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${course.IsHidden ? 'Hiện' : 'Ẩn'}
+          </button>
+          <button class="btn btn-secondary btn-edit-course" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px; margin-right:6px;">
             <i class="fa-solid fa-pen-to-square"></i> Sửa
           </button>
           <button class="btn btn-primary btn-delete-course" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px;">
@@ -1520,6 +1537,14 @@ document.addEventListener('DOMContentLoaded', () => {
           </button>
         </td>
       `;
+
+      // Bind toggle visibility click
+      tr.querySelector('.btn-toggle-visibility').addEventListener('click', async () => {
+        course.IsHidden = !course.IsHidden;
+        await window.ahcomDB.saveCourse(course);
+        showToast(course.IsHidden ? `Đã ẩn khóa học "${course.Title}" đối với học viên!` : `Đã hiển thị khóa học "${course.Title}" cho học viên!`, 'info');
+        await renderAdminCoursesTable();
+      });
 
       // Bind edit click
       tr.querySelector('.btn-edit-course').addEventListener('click', () => {
@@ -1570,6 +1595,7 @@ document.addEventListener('DOMContentLoaded', () => {
       el.editorCategory.value = course.Category;
       el.editorContentType.value = course.ContentType;
       el.editorTargetGroup.value = course.TargetGroup || 'All';
+      if (el.editorIsHidden) el.editorIsHidden.value = course.IsHidden ? 'true' : 'false';
 
       if (course.ContentType === 'Video') {
         el.editorGroupVideoUrl.style.display = 'block';
@@ -2340,6 +2366,7 @@ document.addEventListener('DOMContentLoaded', () => {
       Category: category,
       ContentType: contentType,
       TargetGroup: targetGroup,
+      IsHidden: el.editorIsHidden ? el.editorIsHidden.value === 'true' : false,
       ThumbnailURL: state.currentThumbnailBase64,
       QuizQuestions: [],
       ScopeCompany: el.editorScopeCompany.value,
