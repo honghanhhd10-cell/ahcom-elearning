@@ -1851,72 +1851,128 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Handle slide file import change dynamically
+  // Handle slide file import change dynamically (Supports Excel .xlsx/.xls, CSV, TXT)
   document.addEventListener('change', (e) => {
     if (e.target.id === 'editor-slides-file-input') {
       const file = e.target.files[0];
       if (!file) return;
 
+      const fileExtension = file.name.split('.').pop().toLowerCase();
+
+      // Unsupported binary files warning (PowerPoint / PDF / Docs)
+      if (['pptx', 'ppt', 'pdf', 'docx', 'doc'].includes(fileExtension)) {
+        showToast(`Đối với tệp ${fileExtension.toUpperCase()}, bạn vui lòng chọn 'Nguồn tài liệu Slide' -> 'Nhập liên kết tài liệu ngoài' (Google Slides/PDF) hoặc lưu tệp thành định dạng Excel (.xlsx) / TXT để nhập tự động.`, 'warning');
+        e.target.value = '';
+        return;
+      }
+
       const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target.result;
-        const slides = [];
 
-        if (file.name.endsWith('.csv')) {
-          // Parse CSV
-          const lines = text.split(/[\r\n]+/);
-          lines.forEach(line => {
-            if (!line.trim()) return;
-            const parts = line.split(/[,;]/);
-            if (parts.length >= 2) {
-              const sTitle = parts[0].trim().replace(/^["']|["']$/g, '');
-              const sContent = parts.slice(1).join(',').trim().replace(/^["']|["']$/g, '').replace(/""/g, '"');
-              
-              // Skip header rows
-              if (sTitle.toLowerCase() === 'tiêu đề' || sTitle.toLowerCase() === 'title' || sTitle.toLowerCase() === 'tieu de') {
-                return;
-              }
-              slides.push({ Title: sTitle, Content: sContent });
-            }
-          });
-        } else {
-          // Parse TXT: slides separated by double newlines
-          const blocks = text.split(/\r?\n\r?\n/);
-          blocks.forEach(block => {
-            const trimmedBlock = block.trim();
-            if (!trimmedBlock) return;
-            
-            const lines = trimmedBlock.split(/\r?\n/);
-            const sTitle = lines[0].trim();
-            const sContent = lines.slice(1).join('\n').trim();
-            
-            if (sTitle) {
-              slides.push({ Title: sTitle, Content: sContent });
-            }
-          });
-        }
-
-        if (slides.length === 0) {
-          showToast('Không tìm thấy nội dung slide hợp lệ trong tệp tin.', 'danger');
+      if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        if (typeof XLSX === 'undefined') {
+          showToast('Cần kết nối internet để tải thư viện đọc tệp Excel. Vui lòng thử lại hoặc lưu tệp thành dạng .txt / .csv.', 'danger');
+          e.target.value = '';
           return;
         }
 
-        // Append parsed slides to editor list
-        slides.forEach(s => {
-          addSlideInputRow(s.Title, s.Content);
-        });
+        reader.onload = (event) => {
+          try {
+            const data = new Uint8Array(event.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-        showToast(`Đã nhập thành công ${slides.length} trang slide bài giảng!`, 'success');
-        
-        // Reset file input value
-        e.target.value = '';
-      };
+            const slides = [];
+            const ignoredHeaders = ['STT', 'NO', 'NUM', 'TIÊU ĐỀ', 'TIEU DE', 'TITLE', 'NỘI DUNG', 'NOI DUNG', 'CONTENT'];
 
-      reader.onerror = () => {
-        showToast('Lỗi khi đọc tệp tin slide.', 'danger');
-      };
+            rows.forEach(row => {
+              if (Array.isArray(row) && row.length > 0) {
+                const sTitle = (row[0] !== undefined && row[0] !== null) ? row[0].toString().trim() : '';
+                const sContent = (row[1] !== undefined && row[1] !== null) ? row[1].toString().trim() : '';
+                
+                if (sTitle && !ignoredHeaders.includes(sTitle.toUpperCase())) {
+                  slides.push({ Title: sTitle, Content: sContent });
+                }
+              }
+            });
 
-      reader.readAsText(file);
+            if (slides.length === 0) {
+              showToast('Không tìm thấy nội dung slide hợp lệ trong tệp Excel. Cột 1 cần chứa Tiêu đề Slide, Cột 2 chứa Nội dung Slide.', 'danger');
+              e.target.value = '';
+              return;
+            }
+
+            slides.forEach(s => addSlideInputRow(s.Title, s.Content));
+            showToast(`Đã nhập thành công ${slides.length} trang slide từ tệp Excel!`, 'success');
+          } catch (err) {
+            console.error(err);
+            showToast('Lỗi khi phân tích tệp Excel. Vui lòng kiểm tra lại cấu trúc tệp.', 'danger');
+          }
+          e.target.value = '';
+        };
+
+        reader.onerror = () => {
+          showToast('Lỗi khi đọc tệp Excel.', 'danger');
+          e.target.value = '';
+        };
+
+        reader.readAsArrayBuffer(file);
+      } else {
+        // Handle TXT or CSV
+        reader.onload = (event) => {
+          const text = event.target.result;
+          const slides = [];
+
+          if (fileExtension === 'csv') {
+            const lines = text.split(/[\r\n]+/);
+            lines.forEach(line => {
+              if (!line.trim()) return;
+              const parts = line.split(/[,;]/);
+              if (parts.length >= 1) {
+                const sTitle = parts[0].trim().replace(/^["']|["']$/g, '');
+                const sContent = parts.slice(1).join(',').trim().replace(/^["']|["']$/g, '').replace(/""/g, '"');
+                
+                if (sTitle && sTitle.toLowerCase() !== 'tiêu đề' && sTitle.toLowerCase() !== 'title') {
+                  slides.push({ Title: sTitle, Content: sContent });
+                }
+              }
+            });
+          } else {
+            // TXT
+            const blocks = text.split(/\r?\n\r?\n/);
+            blocks.forEach(block => {
+              const trimmedBlock = block.trim();
+              if (!trimmedBlock) return;
+              
+              const lines = trimmedBlock.split(/\r?\n/);
+              const sTitle = lines[0].trim();
+              const sContent = lines.slice(1).join('\n').trim();
+              
+              if (sTitle) {
+                slides.push({ Title: sTitle, Content: sContent });
+              }
+            });
+          }
+
+          if (slides.length === 0) {
+            showToast('Không tìm thấy nội dung slide hợp lệ trong tệp tin.', 'danger');
+            e.target.value = '';
+            return;
+          }
+
+          slides.forEach(s => addSlideInputRow(s.Title, s.Content));
+          showToast(`Đã nhập thành công ${slides.length} trang slide bài giảng!`, 'success');
+          e.target.value = '';
+        };
+
+        reader.onerror = () => {
+          showToast('Lỗi khi đọc tệp tin slide.', 'danger');
+          e.target.value = '';
+        };
+
+        reader.readAsText(file);
+      }
     }
   });
 
