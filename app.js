@@ -762,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render Video Player
   async function renderVideoPlayer(course, startSeconds) {
+    el.learningMediaContainer.classList.add('video-mode');
     if (course.ContentURL === 'local-video') {
       try {
         const videoBlob = await window.ahcomDB.largeFileStorage.getVideo(course.CourseID);
@@ -872,20 +873,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Render Slide Viewer
   function renderSlideViewer(course, initialSeconds) {
+    el.learningMediaContainer.classList.remove('video-mode');
     if (course.SlideSource === 'link' || course.ContentURL) {
       // LINK SOURCE OR LOCAL PDF SLIDES
       const rawUrl = course.ContentURL || '';
 
       if (rawUrl === 'local-pdf') {
         el.learningMediaContainer.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 480px; color: var(--text-muted);">
+          <div style="display: flex; align-items: center; justify-content: center; height: 580px; color: var(--text-muted);">
             <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px; margin-right: 12px;"></i> Đang tải tệp PDF bài giảng...
           </div>
         `;
         window.ahcomDB.largeFileStorage.getDocument(course.CourseID).then(pdfBlob => {
           if (!pdfBlob) {
             el.learningMediaContainer.innerHTML = `
-              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 480px; text-align: center; padding: 20px;">
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 580px; text-align: center; padding: 20px;">
                 <i class="fa-solid fa-file-circle-exclamation" style="font-size: 48px; color: var(--danger); margin-bottom: 12px;"></i>
                 <p style="color: var(--danger); font-weight: 600;">Không tìm thấy tệp PDF cục bộ trên thiết bị này.</p>
               </div>
@@ -895,9 +897,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const blobUrl = URL.createObjectURL(pdfBlob);
           el.learningMediaContainer.innerHTML = `
-            <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; height: 500px;">
-              <iframe src="${blobUrl}" style="width: 100%; height: 420px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" allowfullscreen></iframe>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+            <div class="slide-container" style="display: flex; flex-direction: column; gap: 12px; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
+              <iframe src="${blobUrl}#view=FitH" style="width: 100%; height: 600px; min-height: 600px; border: none;" allowfullscreen></iframe>
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #ffffff;">
                 <a href="${blobUrl}" download="${course.Title}.pdf" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
                   <i class="fa-solid fa-download"></i> Tải tệp PDF về máy
                 </a>
@@ -928,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (isFolderOrMyDrive) {
         el.learningMediaContainer.innerHTML = `
-          <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; background: #F8FAFC; color: #1E293B; padding: 40px; text-align: center; border-radius: var(--radius-md); height: 480px;">
+          <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; align-items: center; justify-content: center; background: #F8FAFC; color: #1E293B; padding: 40px; text-align: center; border-radius: var(--radius-md); min-height: 580px;">
             <i class="fa-brands fa-google-drive" style="font-size: 64px; color: #34A853; margin-bottom: 8px;"></i>
             <h3 style="font-size: 22px; font-weight: 700; color: var(--primary); margin: 0;">Thư mục Tài liệu Google Drive</h3>
             <p style="color: var(--text-muted); max-width: 550px; font-size: 14px; margin: 8px 0 20px 0; line-height: 1.5;">
@@ -948,9 +950,9 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         const embedUrl = getEmbedUrl(rawUrl);
         el.learningMediaContainer.innerHTML = `
-          <div class="slide-container" style="display: flex; flex-direction: column; gap: 16px; height: 500px;">
-            <iframe src="${embedUrl}" style="width: 100%; height: 420px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);" allowfullscreen></iframe>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 0;">
+          <div class="slide-container" style="display: flex; flex-direction: column; gap: 12px; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
+            <iframe src="${embedUrl}" style="width: 100%; height: 600px; min-height: 600px; border: none;" allowfullscreen></iframe>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #ffffff;">
               <a href="${rawUrl}" target="_blank" class="btn btn-secondary btn-open-external" style="display: inline-flex; align-items: center; gap: 6px;">
                 <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu trong Tab mới
               </a>

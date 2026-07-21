@@ -551,12 +551,18 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Interactive Content Frame */
 .content-wrapper {
-  background-color: #000000;
+  background-color: #2D3748;
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-md);
-  aspect-ratio: 16 / 9;
   position: relative;
+  min-height: 600px;
+}
+
+.content-wrapper.video-mode {
+  aspect-ratio: 16 / 9;
+  min-height: unset;
+  background-color: #000000;
 }
 
 .native-video {
