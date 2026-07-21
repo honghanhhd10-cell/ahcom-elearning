@@ -2043,11 +2043,19 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       courseData.SlideSource = 'manual';
     } else {
-      const slideSource = el.editorSlideSource.value;
+      let slideSource = el.editorSlideSource.value;
+      const slideUrl = el.editorSlideUrl.value.trim();
+      const slideCards = el.editorSlidesList.querySelectorAll('.editor-item-card');
+
+      // Smart Fallback: If user pasted a link but left dropdown on 'manual' without adding slide cards
+      if (slideSource === 'manual' && slideCards.length === 0 && slideUrl) {
+        slideSource = 'link';
+        el.editorSlideSource.value = 'link';
+      }
+
       courseData.SlideSource = slideSource;
 
       if (slideSource === 'link') {
-        const slideUrl = el.editorSlideUrl.value.trim();
         if (!slideUrl) {
           showToast('Vui lòng nhập đường dẫn tài liệu Slide cho khóa học.', 'danger');
           return;
@@ -2055,9 +2063,8 @@ document.addEventListener('DOMContentLoaded', () => {
         courseData.ContentURL = slideUrl;
         courseData.Slides = [];
       } else {
-        const slideCards = el.editorSlidesList.querySelectorAll('.editor-item-card');
         if (slideCards.length === 0) {
-          showToast('Vui lòng thêm ít nhất 1 trang slide nội dung.', 'danger');
+          showToast('Vui lòng bấm nút "+ Thêm trang Slide" (hoặc dán đường dẫn tài liệu ngoài) trước khi lưu.', 'danger');
           return;
         }
 
