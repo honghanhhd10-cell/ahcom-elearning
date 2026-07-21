@@ -9,15 +9,19 @@
   <script>
     window.addEventListener('error', function(e) {
       // Ignore in-app browser injections (Zalo, Messenger) and browser extensions errors
-      const msg = e.message || '';
-      const filename = e.filename || '';
+      const msg = (e.message || e.error || String(e) || '').toLowerCase();
+      const filename = (e.filename || '').toLowerCase();
+      const strE = String(e).toLowerCase();
+      
       if (
-        msg.includes('zaloJSV2') || 
         msg.includes('zalo') || 
-        msg.includes('zBrowser') ||
+        msg.includes('zbrowser') || 
+        msg.includes('zalojsv2') ||
+        strE.includes('zalo') ||
         filename.includes('zalo') || 
         filename.includes('chrome-extension') ||
-        filename.includes('ext')
+        filename.includes('ext') ||
+        !filename || filename === '?'
       ) {
         return;
       }
@@ -28,13 +32,13 @@
         const errorLine = document.createElement('div');
         errorLine.style.marginBottom = '6px';
         errorLine.style.lineHeight = '1.4';
-        errorLine.innerHTML = `<strong>Lỗi:</strong> ${msg} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${filename ? filename.split('/').pop() : 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}</span>`;
+        errorLine.innerHTML = `<strong>Lỗi:</strong> ${e.message || msg} <br> <span style="font-size:10px;color:#ffaaaa;">tại ${filename ? filename.split('/').pop() : 'unknown'}:${e.lineno || '?'}:${e.colno || '?'}</span>`;
         consoleDiv.appendChild(errorLine);
       }
     });
     window.addEventListener('unhandledrejection', function(e) {
-      const reasonMsg = e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason);
-      if (reasonMsg && (reasonMsg.includes('zalo') || reasonMsg.includes('zaloJSV2'))) {
+      const reasonMsg = (e.reason && e.reason.message ? e.reason.message : JSON.stringify(e.reason) || '').toLowerCase();
+      if (reasonMsg && (reasonMsg.includes('zalo') || reasonMsg.includes('zalojsv2') || reasonMsg.includes('zbrowser'))) {
         return;
       }
 
@@ -54,7 +58,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=25">
+  <link rel="stylesheet" href="styles.css?v=26">
 </head>
 <body>
 
@@ -991,10 +995,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=25"></script>
+  <script src="db.js?v=26"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=25"></script>
+  <script src="app.js?v=26"></script>
 
 </body>
 </html>

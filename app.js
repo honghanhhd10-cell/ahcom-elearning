@@ -492,10 +492,8 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Hide courses where IsHidden === true for regular students
-    if (state.currentUser.Role === 'Student') {
-      filteredCourses = filteredCourses.filter(course => !course.IsHidden);
-    }
+    // Always hide courses where IsHidden === true on Student Learning Dashboard
+    filteredCourses = filteredCourses.filter(course => !course.IsHidden);
 
     if (selectedCategory !== 'all') {
       filteredCourses = filteredCourses.filter(c => c.Category === selectedCategory);
