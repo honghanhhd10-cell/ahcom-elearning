@@ -1758,13 +1758,18 @@ document.addEventListener('DOMContentLoaded', () => {
       <button type="button" class="btn-remove-item"><i class="fa-solid fa-trash-can"></i> Xóa trang này</button>
       <div class="form-group" style="margin-top: 16px;">
         <label>Tiêu đề Slide</label>
-        <input type="text" class="form-input slide-title-input" placeholder="Ví dụ: Slide 1: Khái niệm" value="${title}" required>
+        <input type="text" class="form-input slide-title-input" placeholder="Ví dụ: Slide 1: Khái niệm" required>
       </div>
       <div class="form-group" style="margin-bottom: 0;">
         <label>Nội dung chi tiết Slide</label>
-        <textarea class="form-input slide-content-input" rows="3" placeholder="Nhập văn bản giảng dạy hiển thị trên slide..." required style="resize:vertical; font-family:var(--font-family);">${content}</textarea>
+        <textarea class="form-input slide-content-input" rows="3" placeholder="Nhập văn bản giảng dạy hiển thị trên slide..." required style="resize:vertical; font-family:var(--font-family);"></textarea>
       </div>
     `;
+
+    const titleInput = card.querySelector('.slide-title-input');
+    const contentInput = card.querySelector('.slide-content-input');
+    if (titleInput) titleInput.value = title;
+    if (contentInput) contentInput.value = content;
 
     card.querySelector('.btn-remove-item').addEventListener('click', () => {
       card.remove();
@@ -1879,11 +1884,17 @@ document.addEventListener('DOMContentLoaded', () => {
           try {
             const data = new Uint8Array(event.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
+            if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+              showToast('Tệp Excel không chứa dữ liệu slide hợp lệ.', 'danger');
+              e.target.value = '';
+              return;
+            }
+
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-            const slides = [];
+            let slides = [];
             const ignoredHeaders = ['STT', 'NO', 'NUM', 'TIÊU ĐỀ', 'TIEU DE', 'TITLE', 'NỘI DUNG', 'NOI DUNG', 'CONTENT'];
 
             rows.forEach(row => {
@@ -1901,6 +1912,11 @@ document.addEventListener('DOMContentLoaded', () => {
               showToast('Không tìm thấy nội dung slide hợp lệ trong tệp Excel. Cột 1 cần chứa Tiêu đề Slide, Cột 2 chứa Nội dung Slide.', 'danger');
               e.target.value = '';
               return;
+            }
+
+            if (slides.length > 50) {
+              showToast(`Tệp Excel chứa ${slides.length} trang. Hệ thống lấy 50 slide đầu tiên để tối ưu hiệu năng.`, 'warning');
+              slides = slides.slice(0, 50);
             }
 
             slides.forEach(s => addSlideInputRow(s.Title, s.Content));
@@ -1921,48 +1937,58 @@ document.addEventListener('DOMContentLoaded', () => {
       } else {
         // Handle TXT or CSV
         reader.onload = (event) => {
-          const text = event.target.result;
-          const slides = [];
+          try {
+            const text = event.target.result;
+            let slides = [];
 
-          if (fileExtension === 'csv') {
-            const lines = text.split(/[\r\n]+/);
-            lines.forEach(line => {
-              if (!line.trim()) return;
-              const parts = line.split(/[,;]/);
-              if (parts.length >= 1) {
-                const sTitle = parts[0].trim().replace(/^["']|["']$/g, '');
-                const sContent = parts.slice(1).join(',').trim().replace(/^["']|["']$/g, '').replace(/""/g, '"');
+            if (fileExtension === 'csv') {
+              const lines = text.split(/[\r\n]+/);
+              lines.forEach(line => {
+                if (!line.trim()) return;
+                const parts = line.split(/[,;]/);
+                if (parts.length >= 1) {
+                  const sTitle = parts[0].trim().replace(/^["']|["']$/g, '');
+                  const sContent = parts.slice(1).join(',').trim().replace(/^["']|["']$/g, '').replace(/""/g, '"');
+                  
+                  if (sTitle && sTitle.toLowerCase() !== 'tiêu đề' && sTitle.toLowerCase() !== 'title') {
+                    slides.push({ Title: sTitle, Content: sContent });
+                  }
+                }
+              });
+            } else {
+              // TXT
+              const blocks = text.split(/\r?\n\r?\n/);
+              blocks.forEach(block => {
+                const trimmedBlock = block.trim();
+                if (!trimmedBlock) return;
                 
-                if (sTitle && sTitle.toLowerCase() !== 'tiêu đề' && sTitle.toLowerCase() !== 'title') {
+                const lines = trimmedBlock.split(/\r?\n/);
+                const sTitle = lines[0].trim();
+                const sContent = lines.slice(1).join('\n').trim();
+                
+                if (sTitle) {
                   slides.push({ Title: sTitle, Content: sContent });
                 }
-              }
-            });
-          } else {
-            // TXT
-            const blocks = text.split(/\r?\n\r?\n/);
-            blocks.forEach(block => {
-              const trimmedBlock = block.trim();
-              if (!trimmedBlock) return;
-              
-              const lines = trimmedBlock.split(/\r?\n/);
-              const sTitle = lines[0].trim();
-              const sContent = lines.slice(1).join('\n').trim();
-              
-              if (sTitle) {
-                slides.push({ Title: sTitle, Content: sContent });
-              }
-            });
-          }
+              });
+            }
 
-          if (slides.length === 0) {
-            showToast('Không tìm thấy nội dung slide hợp lệ trong tệp tin.', 'danger');
-            e.target.value = '';
-            return;
-          }
+            if (slides.length === 0) {
+              showToast('Không tìm thấy nội dung slide hợp lệ trong tệp tin.', 'danger');
+              e.target.value = '';
+              return;
+            }
 
-          slides.forEach(s => addSlideInputRow(s.Title, s.Content));
-          showToast(`Đã nhập thành công ${slides.length} trang slide bài giảng!`, 'success');
+            if (slides.length > 50) {
+              showToast(`Tệp chứa ${slides.length} trang. Hệ thống lấy 50 slide đầu tiên để tối ưu hiệu năng.`, 'warning');
+              slides = slides.slice(0, 50);
+            }
+
+            slides.forEach(s => addSlideInputRow(s.Title, s.Content));
+            showToast(`Đã nhập thành công ${slides.length} trang slide bài giảng!`, 'success');
+          } catch (err) {
+            console.error(err);
+            showToast('Lỗi khi xử lý nội dung tệp tin slide.', 'danger');
+          }
           e.target.value = '';
         };
 
