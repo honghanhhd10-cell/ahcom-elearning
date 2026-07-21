@@ -726,22 +726,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return url;
   }
 
-  // Simulated watch timer tracking (for Google Drive embeds and external links)
+  // Simulated watch timer tracking (auto-completes when student views slides/documents)
   function startSimulatedWatchProgress(course, startSeconds) {
-    // Clear any active watch timers first
     if (state.watchTimer) {
       clearInterval(state.watchTimer);
     }
 
     let currentSeconds = startSeconds;
+    let hasAnnouncedCompletion = false;
     
     state.watchTimer = setInterval(() => {
-      currentSeconds++;
-      
-      // Save progress to DB every 3 seconds to avoid local storage overhead
-      if (currentSeconds % 3 === 0) {
-        // Assume 5 minutes (300 seconds) is the target completion time
-        const isCompleted = currentSeconds >= 270; // 90% of 300s
+        currentSeconds++;
+        const isCompleted = currentSeconds >= 15;
         
         window.ahcomDB.updateWatchProgress(
           state.currentUser.UserID,
@@ -751,6 +747,11 @@ document.addEventListener('DOMContentLoaded', () => {
         );
         
         updateViewerProgressUI(currentSeconds, isCompleted);
+
+        if (isCompleted && !hasAnnouncedCompletion) {
+          hasAnnouncedCompletion = true;
+          showToast('🎉 Bạn đã học xong bài giảng! Hệ thống đã tự động ghi nhận HOÀN THÀNH.', 'success');
+        }
         
         if (currentSeconds >= 300) {
           clearInterval(state.watchTimer);
@@ -897,24 +898,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
           const blobUrl = URL.createObjectURL(pdfBlob);
           el.learningMediaContainer.innerHTML = `
-            <div class="slide-container" style="display: flex; flex-direction: column; gap: 12px; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
-              <iframe src="${blobUrl}#view=FitH" style="width: 100%; height: 600px; min-height: 600px; border: none;" allowfullscreen></iframe>
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #ffffff;">
-                <a href="${blobUrl}" download="${course.Title}.pdf" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px;">
-                  <i class="fa-solid fa-download"></i> Tải tệp PDF về máy
-                </a>
-                <button class="btn btn-success btn-confirm-completed" style="display: inline-flex; align-items: center; gap: 6px;">
-                  <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
-                </button>
-              </div>
+            <div class="slide-container" style="display: flex; flex-direction: column; width: 100%; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
+              <iframe id="slide-iframe-element" src="${blobUrl}#view=FitH" style="width: 100%; height: 620px; min-height: 620px; border: none;" allowfullscreen></iframe>
             </div>
           `;
-
-          el.learningMediaContainer.querySelector('.btn-confirm-completed').addEventListener('click', () => {
-            window.ahcomDB.updateWatchProgress(state.currentUser.UserID, course.CourseID, 300, true);
-            updateViewerProgressUI(300, true);
-            showToast('Chúc mừng bạn đã hoàn thành bài học tài liệu này!', 'success');
-          });
         }).catch(err => {
           console.error(err);
           el.learningMediaContainer.innerHTML = `<p style="color: var(--danger); padding: 20px;">Lỗi khi mở tệp PDF: ${err.message}</p>`;
@@ -941,42 +928,18 @@ document.addEventListener('DOMContentLoaded', () => {
               <a href="${rawUrl}" target="_blank" class="btn btn-primary" style="padding: 12px 24px; font-size: 15px; font-weight: 600;">
                 <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu Google Drive
               </a>
-              <button class="btn btn-success btn-confirm-completed" style="padding: 12px 24px; font-size: 15px; font-weight: 600;">
-                <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
-              </button>
             </div>
           </div>
         `;
       } else {
         const embedUrl = getEmbedUrl(rawUrl);
         el.learningMediaContainer.innerHTML = `
-          <div class="slide-container" style="display: flex; flex-direction: column; gap: 12px; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
-            <iframe src="${embedUrl}" style="width: 100%; height: 600px; min-height: 600px; border: none;" allowfullscreen></iframe>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: #ffffff;">
-              <a href="${rawUrl}" target="_blank" class="btn btn-secondary btn-open-external" style="display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-up-right-from-square"></i> Mở tài liệu trong Tab mới
-              </a>
-              <button class="btn btn-success btn-confirm-completed" style="display: inline-flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-circle-check"></i> Xác nhận đã học xong bài
-              </button>
-            </div>
+          <div class="slide-container" style="display: flex; flex-direction: column; width: 100%; min-height: 620px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
+            <iframe id="slide-iframe-element" src="${embedUrl}" style="width: 100%; height: 620px; min-height: 620px; border: none;" allowfullscreen></iframe>
           </div>
         `;
       }
 
-      // Bind confirm complete click
-      el.learningMediaContainer.querySelector('.btn-confirm-completed').addEventListener('click', () => {
-        window.ahcomDB.updateWatchProgress(
-          state.currentUser.UserID,
-          course.CourseID,
-          300, // Full progress (5 mins)
-          true
-        );
-        updateViewerProgressUI(300, true);
-        showToast('Chúc mừng bạn đã hoàn thành bài học tài liệu này!', 'success');
-      });
-
-      // Start simulated watch timer
       startSimulatedWatchProgress(course, initialSeconds);
       return;
     }
@@ -1780,7 +1743,33 @@ document.addEventListener('DOMContentLoaded', () => {
     el.btnRemoveThumbnail.style.display = 'none';
   });
 
-  // --- LOCAL VIDEO UPLOADER MANAGER LOGIC ---
+  // --- FULLSCREEN VIEWER TOGGLE LOGIC ---
+  const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen');
+  if (btnToggleFullscreen) {
+    btnToggleFullscreen.addEventListener('click', () => {
+      const container = document.getElementById('learning-media-container');
+      const iframe = container ? container.querySelector('iframe') : null;
+      const target = iframe || container;
+
+      if (target) {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+          if (target.requestFullscreen) {
+            target.requestFullscreen();
+          } else if (target.webkitRequestFullscreen) {
+            target.webkitRequestFullscreen();
+          } else if (target.msRequestFullscreen) {
+            target.msRequestFullscreen();
+          }
+        } else {
+          if (document.exitFullscreen) {
+            document.exitFullscreen();
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+          }
+        }
+      }
+    });
+  }
   el.btnUploadVideo.addEventListener('click', () => {
     el.editorVideoFileInput.click();
   });

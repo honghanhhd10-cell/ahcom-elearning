@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link rel="stylesheet" href="styles.css?v=16">
 </head>
 <body>
 
@@ -226,8 +226,11 @@
       <div class="viewer-layout">
         <!-- Cột trái: Trình phát Video / Trình diễn Slide -->
         <div class="viewer-main">
-          <div class="viewer-header">
+          <div class="viewer-header" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;">
             <h2 id="viewer-course-title" class="viewer-title">Tên khóa học đang học</h2>
+            <button class="btn btn-secondary" id="btn-toggle-fullscreen" style="display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; font-size: 13px;">
+              <i class="fa-solid fa-expand"></i> Xem Toàn Màn Hình
+            </button>
           </div>
 
           <div class="content-wrapper" id="learning-media-container">
@@ -981,10 +984,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=15"></script>
+  <script src="db.js?v=16"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=15"></script>
+  <script src="app.js?v=16"></script>
 
 </body>
 </html>
