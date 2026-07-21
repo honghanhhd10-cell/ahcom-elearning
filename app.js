@@ -736,27 +736,26 @@ document.addEventListener('DOMContentLoaded', () => {
     let hasAnnouncedCompletion = false;
     
     state.watchTimer = setInterval(() => {
-        currentSeconds++;
-        const isCompleted = currentSeconds >= 15;
-        
-        window.ahcomDB.updateWatchProgress(
-          state.currentUser.UserID,
-          course.CourseID,
-          currentSeconds,
-          isCompleted
-        );
-        
-        updateViewerProgressUI(currentSeconds, isCompleted);
+      currentSeconds++;
+      const isCompleted = currentSeconds >= 15;
+      
+      window.ahcomDB.updateWatchProgress(
+        state.currentUser.UserID,
+        course.CourseID,
+        currentSeconds,
+        isCompleted
+      );
+      
+      updateViewerProgressUI(currentSeconds, isCompleted);
 
-        if (isCompleted && !hasAnnouncedCompletion) {
-          hasAnnouncedCompletion = true;
-          showToast('🎉 Bạn đã học xong bài giảng! Hệ thống đã tự động ghi nhận HOÀN THÀNH.', 'success');
-        }
-        
-        if (currentSeconds >= 300) {
-          clearInterval(state.watchTimer);
-          state.watchTimer = null;
-        }
+      if (isCompleted && !hasAnnouncedCompletion) {
+        hasAnnouncedCompletion = true;
+        showToast('🎉 Bạn đã học xong bài giảng! Hệ thống đã tự động ghi nhận HOÀN THÀNH.', 'success');
+      }
+      
+      if (currentSeconds >= 300) {
+        clearInterval(state.watchTimer);
+        state.watchTimer = null;
       }
     }, 1000);
   }
