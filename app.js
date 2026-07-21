@@ -492,8 +492,11 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
-    // Always hide courses where IsHidden === true on Student Learning Dashboard
-    filteredCourses = filteredCourses.filter(course => !course.IsHidden);
+    // Always hide courses where IsHidden / is_hidden is true on Student Learning Dashboard
+    filteredCourses = filteredCourses.filter(course => {
+      const isHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
+      return !isHidden;
+    });
 
     if (selectedCategory !== 'all') {
       filteredCourses = filteredCourses.filter(c => c.Category === selectedCategory);
@@ -1508,7 +1511,9 @@ document.addEventListener('DOMContentLoaded', () => {
     courses.forEach(course => {
       const quizCount = course.QuizQuestions ? course.QuizQuestions.length : 0;
       const typeLabel = course.ContentType === 'Video' ? '<i class="fa-solid fa-video"></i> Video' : '<i class="fa-solid fa-file-powerpoint"></i> Slides';
-      const visibilityBadge = course.IsHidden
+      const isHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
+
+      const visibilityBadge = isHidden
         ? '<span class="badge-status pending" style="background:#FFFBEB; color:#D97706; border:1px solid #FCD34D; font-size:11px;"><i class="fa-solid fa-eye-slash"></i> Đã ẩn</span>'
         : '<span class="badge-status passed" style="background:#ECFDF5; color:#059669; border:1px solid #6EE7B7; font-size:11px;"><i class="fa-solid fa-eye"></i> Hiển thị</span>';
       
@@ -1525,7 +1530,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <td style="font-weight:600;">${quizCount} câu hỏi</td>
         <td style="text-align: right; padding-right:24px;">
           <button class="btn btn-secondary btn-toggle-visibility" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px; margin-right:6px;">
-            <i class="fa-solid ${course.IsHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${course.IsHidden ? 'Hiện' : 'Ẩn'}
+            <i class="fa-solid ${isHidden ? 'fa-eye' : 'fa-eye-slash'}"></i> ${isHidden ? 'Hiện' : 'Ẩn'}
           </button>
           <button class="btn btn-secondary btn-edit-course" data-id="${course.CourseID}" style="padding: 6px 12px; font-size:12px; margin-right:6px;">
             <i class="fa-solid fa-pen-to-square"></i> Sửa
@@ -1538,9 +1543,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Bind toggle visibility click
       tr.querySelector('.btn-toggle-visibility').addEventListener('click', async () => {
-        course.IsHidden = !course.IsHidden;
+        const nextState = !isHidden;
+        course.IsHidden = nextState;
+        course.is_hidden = nextState;
         await window.ahcomDB.saveCourse(course);
-        showToast(course.IsHidden ? `Đã ẩn khóa học "${course.Title}" đối với học viên!` : `Đã hiển thị khóa học "${course.Title}" cho học viên!`, 'info');
+        showToast(nextState ? `Đã ẩn khóa học "${course.Title}" đối với học viên!` : `Đã hiển thị khóa học "${course.Title}" cho học viên!`, 'info');
         await renderAdminCoursesTable();
       });
 
@@ -1593,7 +1600,8 @@ document.addEventListener('DOMContentLoaded', () => {
       el.editorCategory.value = course.Category;
       el.editorContentType.value = course.ContentType;
       el.editorTargetGroup.value = course.TargetGroup || 'All';
-      if (el.editorIsHidden) el.editorIsHidden.value = course.IsHidden ? 'true' : 'false';
+      const isCourseHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
+      if (el.editorIsHidden) el.editorIsHidden.value = isCourseHidden ? 'true' : 'false';
 
       if (course.ContentType === 'Video') {
         el.editorGroupVideoUrl.style.display = 'block';
@@ -2358,13 +2366,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const contentType = el.editorContentType.value;
     const targetGroup = el.editorTargetGroup.value;
 
+    const isHiddenValue = el.editorIsHidden ? el.editorIsHidden.value === 'true' : false;
+
     const courseData = {
       CourseID: courseId,
       Title: title,
       Category: category,
       ContentType: contentType,
       TargetGroup: targetGroup,
-      IsHidden: el.editorIsHidden ? el.editorIsHidden.value === 'true' : false,
+      IsHidden: isHiddenValue,
+      is_hidden: isHiddenValue,
       ThumbnailURL: state.currentThumbnailBase64,
       QuizQuestions: [],
       ScopeCompany: el.editorScopeCompany.value,
