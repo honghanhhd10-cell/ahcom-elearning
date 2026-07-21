@@ -361,21 +361,34 @@ const db = {
       console.error("Lỗi getCourses: ", error);
       return [];
     }
-    return data.map(c => ({
-      CourseID: c.course_id,
-      Title: c.title,
-      Category: c.category,
-      ContentType: c.content_type,
-      TargetGroup: c.target_group,
-      ContentURL: c.content_url,
-      SlideSource: c.slide_source,
-      ThumbnailURL: c.thumbnail_url,
-      Slides: c.slides || [],
-      QuizQuestions: c.quiz_questions || [],
-      ScopeCompany: c.scope_company || 'All',
-      ScopeDepartment: c.scope_department || 'All',
-      CreatedByUserId: c.created_by_user_id
-    }));
+    let localCache = {};
+    try {
+      localCache = JSON.parse(localStorage.getItem('ahcom_courses_cache') || '{}');
+    } catch(e) {}
+
+    return data.map(c => {
+      const cached = localCache[c.course_id] || {};
+      const isHidden = c.is_hidden !== undefined && c.is_hidden !== null 
+        ? c.is_hidden 
+        : (cached.IsHidden !== undefined ? cached.IsHidden : false);
+
+      return {
+        CourseID: c.course_id,
+        Title: c.title,
+        Category: c.category,
+        ContentType: c.content_type,
+        TargetGroup: c.target_group,
+        ContentURL: c.content_url,
+        SlideSource: c.slide_source,
+        ThumbnailURL: c.thumbnail_url,
+        Slides: c.slides || [],
+        QuizQuestions: c.quiz_questions || [],
+        ScopeCompany: c.scope_company || 'All',
+        ScopeDepartment: c.scope_department || 'All',
+        CreatedByUserId: c.created_by_user_id,
+        IsHidden: isHidden
+      };
+    });
   },
 
   async saveCourse(courseData) {
@@ -393,16 +406,33 @@ const db = {
       quiz_questions: courseData.QuizQuestions || [],
       scope_company: courseData.ScopeCompany || 'All',
       scope_department: courseData.ScopeDepartment || 'All',
-      created_by_user_id: courseData.CreatedByUserId || null
+      created_by_user_id: courseData.CreatedByUserId || null,
+      is_hidden: courseData.IsHidden || false
     };
 
-    const { error } = await supabaseClient
+    let { error } = await supabaseClient
       .from('ahcom_courses')
       .upsert(row);
+
+    // Fallback if is_hidden column is not created in Supabase schema yet
+    if (error && error.message && error.message.includes('is_hidden')) {
+      delete row.is_hidden;
+      const res = await supabaseClient.from('ahcom_courses').upsert(row);
+      error = res.error;
+    }
+
     if (error) {
       throw new Error(error.message);
     }
     courseData.CourseID = courseId;
+
+    // Cache locally
+    try {
+      const localCourses = JSON.parse(localStorage.getItem('ahcom_courses_cache') || '{}');
+      localCourses[courseId] = courseData;
+      localStorage.setItem('ahcom_courses_cache', JSON.stringify(localCourses));
+    } catch(e) {}
+
     return courseData;
   },
 
@@ -412,6 +442,12 @@ const db = {
       .delete()
       .eq('course_id', courseId);
     if (error) throw new Error(error.message);
+
+    try {
+      const localCourses = JSON.parse(localStorage.getItem('ahcom_courses_cache') || '{}');
+      delete localCourses[courseId];
+      localStorage.setItem('ahcom_courses_cache', JSON.stringify(localCourses));
+    } catch(e) {}
 
     // Clean large local video file in IndexedDB
     if (this.largeFileStorage) {
