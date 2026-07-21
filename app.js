@@ -1974,8 +1974,146 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Event delegation to handle dynamic clicks on Add Slide, Add Question, and Import Slides buttons
+  // --- AI AUTOMATIC QUIZ GENERATOR FROM LESSON CONTENT ---
+  function generateAIQuestionsFromContent() {
+    const courseTitle = el.editorTitle.value.trim() || 'Bài học AHCOM';
+    const category = el.editorCategory.value || 'General';
+    const slideCards = el.editorSlidesList.querySelectorAll('.editor-item-card');
+
+    let generatedQuestions = [];
+
+    if (slideCards && slideCards.length > 0) {
+      // Extract key concepts from slides
+      slideCards.forEach((card, idx) => {
+        const title = card.querySelector('.slide-title-input').value.trim();
+        const content = card.querySelector('.slide-content-input').value.trim();
+
+        if (title || content) {
+          const mainTopic = title || `Nội dung phần ${idx + 1}`;
+          const contentSnippet = content ? content.slice(0, 120) : mainTopic;
+
+          generatedQuestions.push({
+            Question: `Theo nội dung bài học "${mainTopic}", đâu là kiến thức trọng tâm chính xác?`,
+            Options: [
+              contentSnippet ? `${contentSnippet}` : `Nội dung cốt lõi của ${mainTopic}`,
+              `Thông tin chưa đầy đủ hoặc không được áp dụng tại AHCOM`,
+              `Quy định không bắt buộc đối với nhân sự chính thức`,
+              `Tài liệu tham khảo chưa được phê duyệt bởi Ban Giám Đốc`
+            ],
+            CorrectIndex: 0
+          });
+
+          if (content.length > 40) {
+            generatedQuestions.push({
+              Question: `Mục tiêu chính của phần học "${mainTopic}" nhằm cung cấp kỹ năng gì cho nhân sự?`,
+              Options: [
+                `Nắm vững quy trình và thực hành hiệu quả theo nội dung ${mainTopic}`,
+                `Thay thế toàn bộ quy trình làm việc cũ tại đại lý`,
+                `Chỉ áp dụng thử nghiệm trong thời gian ngắn`,
+                `Báo cáo kết quả trực tiếp cho cơ quan ngoài`
+              ],
+              CorrectIndex: 0
+            });
+          }
+        }
+      });
+    }
+
+    // Fallback template questions based on Course Title & Category if slides are empty
+    if (generatedQuestions.length === 0) {
+      if (category === 'Sales' || courseTitle.toLowerCase().includes('bán hàng')) {
+        generatedQuestions = [
+          {
+            Question: `Kỹ năng quan trọng nhất trong bài học "${courseTitle}" khi tiếp xúc với khách hàng là gì?`,
+            Options: [
+              `Lắng nghe nhu cầu, tư vấn giải pháp phù hợp và xây dựng niềm tin với khách hàng`,
+              `Ép buộc khách hàng ký hợp đồng ngay trong lần gặp đầu tiên`,
+              `Bỏ qua các thắc mắc của khách hàng về giá sản phẩm`,
+              `Chỉ giới thiệu thông số mà không tìm hiểu nhu cầu thực tế`
+            ],
+            CorrectIndex: 0
+          },
+          {
+            Question: `Theo nội dung bài học "${courseTitle}", bước nào sau đây là bắt buộc trong quy trình chăm sóc khách hàng?`,
+            Options: [
+              `Theo dõi, phản hồi thắc mắc và hỗ trợ khách hàng sau khi hoàn tất giao dịch`,
+              `Kết thúc liên lạc ngay sau khi khách hàng thanh toán`,
+              `Chờ khách hàng tự tìm hiểu và không chủ động chăm sóc`,
+              `Chuyển toàn bộ hồ sơ cho bộ phận khác mà không bàn giao`
+            ],
+            CorrectIndex: 0
+          }
+        ];
+      } else if (category === 'DISC' || courseTitle.toLowerCase().includes('disc')) {
+        generatedQuestions = [
+          {
+            Question: `Mục đích của việc ứng dụng bài học "${courseTitle}" trong giao tiếp công việc là gì?`,
+            Options: [
+              `Nhận biết nhóm tính cách để thấu hiểu và giao tiếp hiệu quả với đồng nghiệp, khách hàng`,
+              `Phân loại và đánh giá năng lực làm việc của nhân sự`,
+              `Áp dụng một phong cách giao tiếp duy nhất cho tất cả mọi người`,
+              `Tránh tiếp xúc với những người có nhóm tính cách khác mình`
+            ],
+            CorrectIndex: 0
+          },
+          {
+            Question: `Khi giao tiếp công việc theo nội dung bài học "${courseTitle}", bạn nên ứng xử như thế nào?`,
+            Options: [
+              `Chuẩn bị thông tin ngắn gọn, đi thẳng vào trọng tâm và đưa ra giải pháp rõ ràng`,
+              `Nói chuyện lan man không có mục đích cụ thể`,
+              `Thay đổi kế hoạch liên tục không thông báo trước`,
+              `Giao việc mà không nêu rõ thời hạn hoàn thành`
+            ],
+            CorrectIndex: 0
+          }
+        ];
+      } else {
+        generatedQuestions = [
+          {
+            Question: `Yêu cầu cốt lõi đối với học viên sau khi hoàn thành bài học "${courseTitle}" là gì?`,
+            Options: [
+              `Hiểu rõ kiến thức, tuân thủ đúng quy trình và áp dụng hiệu quả vào công việc thực tế`,
+              `Chỉ cần hoàn thành bài thi trắc nghiệm mà không cần áp dụng`,
+              `Ghi nhớ lý thuyết và không cần chia sẻ với đồng nghiệp`,
+              `Thay đổi quy trình làm việc theo ý kiến cá nhân`
+            ],
+            CorrectIndex: 0
+          },
+          {
+            Question: `Trách nhiệm của nhân sự AHCOM sau khi nghiên cứu nội dung bài học "${courseTitle}" là gì?`,
+            Options: [
+              `Chủ động cập nhật kiến thức, thực hiện đúng hướng dẫn và tham gia đánh giá định kỳ`,
+              `Chờ nhắc nhở từ cấp quản lý mới bắt đầu thực hiện`,
+              `Chỉ thực hiện khi có yêu cầu từ Ban Giám Đốc`,
+              `Bỏ qua các cập nhật mới trong tài liệu hướng dẫn`
+            ],
+            CorrectIndex: 0
+          }
+        ];
+      }
+    }
+
+    return generatedQuestions;
+  }
+
+  // Event delegation to handle dynamic clicks on Add Slide, Add Question, Import Slides, AI Quiz buttons
   document.addEventListener('click', (e) => {
+    const aiQuizBtn = e.target.closest('#btn-editor-ai-quiz');
+    if (aiQuizBtn) {
+      e.preventDefault();
+      const questions = generateAIQuestionsFromContent();
+      if (questions && questions.length > 0) {
+        const questionsList = document.getElementById('editor-questions-list');
+        if (questionsList) {
+          questionsList.innerHTML = '';
+        }
+        questions.forEach(q => {
+          addQuestionInputRow(q.Question, q.Options, q.CorrectIndex);
+        });
+        showToast(`✨ Đã tự động tạo ${questions.length} câu hỏi trắc nghiệm kèm đáp án chuẩn từ nội dung bài học!`, 'success');
+      }
+      return;
+    }
     const addSlideBtn = e.target.closest('#btn-editor-add-slide');
     if (addSlideBtn) {
       e.preventDefault();

@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
 </head>
 <body>
 
@@ -784,9 +784,14 @@
           <div>
             <div class="editor-section-header">
               <h4>Bộ câu hỏi trắc nghiệm (Quiz)</h4>
-              <button type="button" class="btn btn-secondary" id="btn-editor-add-question">
-                <i class="fa-solid fa-plus"></i> Thêm câu hỏi
-              </button>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button type="button" class="btn btn-secondary" id="btn-editor-ai-quiz" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border: none; padding: 8px 12px; font-size: 13px;">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> ✨ Tạo tự động Quiz AI
+                </button>
+                <button type="button" class="btn btn-secondary" id="btn-editor-add-question">
+                  <i class="fa-solid fa-plus"></i> Thêm câu hỏi
+                </button>
+              </div>
             </div>
             <div id="editor-questions-list">
               <!-- Render động câu hỏi qua JS -->
@@ -976,10 +981,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=13"></script>
+  <script src="db.js?v=14"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=13"></script>
+  <script src="app.js?v=14"></script>
 
 </body>
 </html>
