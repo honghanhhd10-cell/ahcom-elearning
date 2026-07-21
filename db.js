@@ -338,19 +338,6 @@ const db = {
     return { success: true, message: `Đã xóa ${selectedIds.length} mã nhân sự.` };
   },
 
-  async clearValidEmployeeIDs() {
-    const { error } = await supabaseClient
-      .from('ahcom_whitelist')
-      .delete()
-      .neq('employee_id', '');
-    if (error) return { success: false, message: error.message };
-    return { success: true, message: 'Đã xóa toàn bộ danh sách whitelist thành công.' };
-  },
-
-  async clearAllValidEmployeeIDs() {
-    return await this.clearValidEmployeeIDs();
-  },
-
   // --- COURSES ---
   async getCourses() {
     const { data, error } = await supabaseClient
@@ -361,23 +348,18 @@ const db = {
       console.error("Lỗi getCourses: ", error);
       return [];
     }
-    let localCache = {};
-    try {
-      localCache = JSON.parse(localStorage.getItem('ahcom_courses_cache') || '{}');
-    } catch(e) {}
 
     return data.map(c => {
-      const cached = localCache[c.course_id] || {};
-      const isHidden = c.is_hidden !== undefined && c.is_hidden !== null 
-        ? c.is_hidden 
-        : (cached.IsHidden !== undefined ? cached.IsHidden : false);
+      const rawTargetGroup = c.target_group || 'All';
+      const isHidden = rawTargetGroup.startsWith('HIDDEN_') || c.is_hidden === true || String(c.is_hidden) === 'true';
+      const cleanTargetGroup = rawTargetGroup.replace('HIDDEN_', '');
 
       return {
         CourseID: c.course_id,
         Title: c.title,
         Category: c.category,
         ContentType: c.content_type,
-        TargetGroup: c.target_group,
+        TargetGroup: cleanTargetGroup,
         ContentURL: c.content_url,
         SlideSource: c.slide_source,
         ThumbnailURL: c.thumbnail_url,
@@ -393,12 +375,17 @@ const db = {
 
   async saveCourse(courseData) {
     const courseId = courseData.CourseID || ('c_' + Date.now());
+    const baseTargetGroup = courseData.TargetGroup || 'All';
+    const isHidden = !!courseData.IsHidden;
+    const cleanGroup = baseTargetGroup.replace('HIDDEN_', '');
+    const targetGroupVal = isHidden ? ('HIDDEN_' + cleanGroup) : cleanGroup;
+
     const row = {
       course_id: courseId,
       title: courseData.Title,
       category: courseData.Category,
       content_type: courseData.ContentType,
-      target_group: courseData.TargetGroup,
+      target_group: targetGroupVal,
       content_url: courseData.ContentURL || '',
       slide_source: courseData.SlideSource || 'manual',
       thumbnail_url: courseData.ThumbnailURL || '',
@@ -406,33 +393,17 @@ const db = {
       quiz_questions: courseData.QuizQuestions || [],
       scope_company: courseData.ScopeCompany || 'All',
       scope_department: courseData.ScopeDepartment || 'All',
-      created_by_user_id: courseData.CreatedByUserId || null,
-      is_hidden: courseData.IsHidden || false
+      created_by_user_id: courseData.CreatedByUserId || null
     };
 
-    let { error } = await supabaseClient
+    const { error } = await supabaseClient
       .from('ahcom_courses')
       .upsert(row);
-
-    // Fallback if is_hidden column is not created in Supabase schema yet
-    if (error && error.message && error.message.includes('is_hidden')) {
-      delete row.is_hidden;
-      const res = await supabaseClient.from('ahcom_courses').upsert(row);
-      error = res.error;
-    }
 
     if (error) {
       throw new Error(error.message);
     }
     courseData.CourseID = courseId;
-
-    // Cache locally
-    try {
-      const localCourses = JSON.parse(localStorage.getItem('ahcom_courses_cache') || '{}');
-      localCourses[courseId] = courseData;
-      localStorage.setItem('ahcom_courses_cache', JSON.stringify(localCourses));
-    } catch(e) {}
-
     return courseData;
   },
 
