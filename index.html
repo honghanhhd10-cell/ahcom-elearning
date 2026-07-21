@@ -54,7 +54,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=21">
+  <link rel="stylesheet" href="styles.css?v=22">
 </head>
 <body>
 
@@ -64,35 +64,35 @@
   <!-- Navbar (Hiển thị khi đã đăng nhập) -->
   <nav id="main-navbar" class="navbar" style="display: none;">
     <div class="navbar-container">
-      <a href="#" class="navbar-logo" id="nav-logo-btn" title="Quay về trang chủ" style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-decoration: none;">
-        <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo" style="height: 35px; width: auto; display: block; object-fit: contain;">
-        <span style="font-size: 13px; font-weight: 800; color: var(--primary); letter-spacing: 0.2px; text-transform: uppercase; margin-top: 2px; font-family: var(--font-family);">Đào tạo AHCOM</span>
-      </a>
-      
-      <div class="navbar-menu">
-        <!-- Menu cho Học viên -->
-        <a href="#" class="nav-link active" id="nav-courses-link" style="display: none;">
-          <i class="fa-solid fa-book-open"></i> Khóa học của tôi
+      <div class="navbar-top-row">
+        <a href="#" class="navbar-logo" id="nav-logo-btn" title="Quay về trang chủ">
+          <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo">
+          <span>Đào tạo AHCOM</span>
         </a>
-        
-        <!-- Menu cho Admin -->
-        <a href="#" class="nav-link" id="nav-admin-link" style="display: none;">
-          <i class="fa-solid fa-chart-line"></i> Thống kê Quản trị
-        </a>
-        
-        <!-- Thông tin người dùng -->
+
+        <!-- Thông tin người dùng (Góc phải) -->
         <div class="user-info-section">
           <div class="user-badge" id="btn-user-badge-profile" style="cursor: pointer;" title="Chỉnh sửa thông tin cá nhân">
             <span class="user-name" id="display-user-name">Đang tải...</span>
             <span class="user-role" id="display-user-role">Học viên</span>
           </div>
-          <button class="btn btn-secondary" id="btn-nav-profile" style="padding: 6px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3); color: white;">
+          <button class="btn btn-secondary" id="btn-nav-profile">
             <i class="fa-solid fa-user-gear"></i> Tài khoản
           </button>
           <button class="logout-btn" id="btn-logout">
             <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
           </button>
         </div>
+      </div>
+      
+      <!-- Menu Tabs cho Học viên & Admin -->
+      <div class="navbar-nav-tabs">
+        <a href="#" class="nav-link active" id="nav-courses-link" style="display: none;">
+          <i class="fa-solid fa-book-open"></i> Khóa học của tôi
+        </a>
+        <a href="#" class="nav-link" id="nav-admin-link" style="display: none;">
+          <i class="fa-solid fa-chart-line"></i> Thống kê Quản trị
+        </a>
       </div>
     </div>
   </nav>
@@ -984,10 +984,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=21"></script>
+  <script src="db.js?v=22"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=21"></script>
+  <script src="app.js?v=22"></script>
 
 </body>
 </html>

@@ -127,7 +127,7 @@ h1, h2, h3, h4, h5, h6 {
 .navbar {
   background-color: var(--card-bg);
   border-bottom: 1px solid var(--border-color);
-  padding: 16px 24px;
+  padding: 12px 24px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -140,57 +140,53 @@ h1, h2, h3, h4, h5, h6 {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 20px;
+}
+
+.navbar-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 20px;
 }
 
 .navbar-logo {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   text-decoration: none;
 }
 
-.logo-icon {
-  width: 40px;
-  height: 40px;
-  background: linear-gradient(135deg, var(--primary) 0%, #B22222 100%);
-  color: white;
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  font-weight: 800;
-  box-shadow: 0 4px 10px rgba(139, 0, 0, 0.3);
-}
-
-.logo-text {
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--primary);
-  letter-spacing: -0.5px;
-}
-
-.logo-text span {
-  color: var(--text-primary);
-  font-weight: 400;
-  font-size: 14px;
+.navbar-logo img {
+  height: 36px;
+  width: auto;
   display: block;
-  margin-top: -4px;
+  object-fit: contain;
 }
 
-.navbar-menu {
+.navbar-logo span {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--primary);
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+  font-family: var(--font-family);
+}
+
+.navbar-nav-tabs {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
 }
 
 .nav-link {
   color: var(--text-primary);
   text-decoration: none;
-  font-weight: 500;
-  font-size: 15px;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 20px;
   transition: var(--transition);
 }
 
@@ -202,7 +198,7 @@ h1, h2, h3, h4, h5, h6 {
 .user-info-section {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
 }
 
 .user-badge {
@@ -212,12 +208,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .user-name {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--primary);
 }
 
 .user-role {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-muted);
 }
 
@@ -225,11 +222,11 @@ h1, h2, h3, h4, h5, h6 {
   padding: 6px 12px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
-  background: none;
+  background: transparent;
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   transition: var(--transition);
@@ -1277,30 +1274,83 @@ h1, h2, h3, h4, h5, h6 {
    MOBILE & TABLET RESPONSIVE OPTIMIZATION
    ========================================================================== */
 @media (max-width: 768px) {
-  /* Navbar Header */
-  .navbar .container {
-    padding: 10px 16px;
+  /* 1. Unstick navbar on mobile so header scrolls away and doesn't block screen */
+  .navbar {
+    position: relative !important;
+    top: auto !important;
+    padding: 10px 14px !important;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .navbar-container {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
+    align-items: stretch;
   }
 
-  .nav-user-info {
-    padding: 10px 14px;
+  /* Top Row: Left = Logo & Title, Right = User & Action Buttons */
+  .navbar-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     width: 100%;
-    text-align: center;
-    box-shadow: var(--shadow-sm);
   }
 
-  .nav-user-actions {
-    margin-top: 8px;
+  .navbar-logo img {
+    height: 28px !important;
+  }
+
+  .navbar-logo span {
+    font-size: 11px !important;
+    letter-spacing: 0.1px;
+  }
+
+  .user-info-section {
+    margin-left: auto;
+    gap: 6px;
+  }
+
+  .user-badge {
+    text-align: right;
+  }
+
+  .user-badge .user-name {
+    font-size: 12px;
+    font-weight: 700;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .user-badge .user-role {
+    display: none; /* Hide role subtitle to save vertical space on mobile */
+  }
+
+  #btn-nav-profile,
+  .logout-btn {
+    padding: 5px 8px !important;
+    font-size: 12px !important;
+    border-radius: 6px !important;
+  }
+
+  /* Second Row: Clean Horizontal Navigation Tabs for Mobile */
+  .navbar-nav-tabs {
+    display: flex;
     justify-content: center;
+    gap: 8px;
     width: 100%;
+    margin-top: 4px;
+    padding-top: 6px;
+    border-top: 1px dashed var(--border-color);
   }
 
-  .nav-user-actions .btn {
+  .nav-link {
+    font-size: 12px !important;
+    padding: 6px 14px !important;
+    border-radius: 20px !important;
     flex: 1;
-    font-size: 13px;
-    padding: 8px 12px;
+    text-align: center;
   }
 
   /* Course Viewer on Mobile */
@@ -1310,21 +1360,21 @@ h1, h2, h3, h4, h5, h6 {
   }
 
   .content-wrapper {
-    min-height: 460px;
+    min-height: 440px;
     border-radius: var(--radius-sm);
   }
 
   .slide-container {
-    min-height: 460px !important;
+    min-height: 440px !important;
   }
 
   .slide-container iframe {
-    height: 460px !important;
-    min-height: 460px !important;
+    height: 440px !important;
+    min-height: 440px !important;
   }
 
   .viewer-title {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   #btn-toggle-fullscreen {
