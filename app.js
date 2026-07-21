@@ -686,6 +686,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- EXTERNAL LINK CONVERTERS & SIMULATED PROGRESS TRACKERS ---
+  function escapeHTML(str) {
+    if (!str) return '';
+    return str.toString()
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
 
   // Helper to parse and convert Google Drive and YouTube links to embeddable preview URLs
   function getEmbedUrl(url) {
@@ -1057,17 +1066,17 @@ document.addEventListener('DOMContentLoaded', () => {
       qCard.className = 'quiz-question-card';
       
       let optionsHTML = '';
-      q.Options.forEach((option, oIndex) => {
+      (q.Options || []).forEach((option, oIndex) => {
         optionsHTML += `
           <label class="quiz-option-label" for="q-${qIndex}-o-${oIndex}">
             <input type="radio" name="question-${qIndex}" id="q-${qIndex}-o-${oIndex}" value="${oIndex}" required>
-            <span>${option}</span>
+            <span>${escapeHTML(option)}</span>
           </label>
         `;
       });
 
       qCard.innerHTML = `
-        <p class="quiz-question-text">Câu ${qIndex + 1}: ${q.Question}</p>
+        <p class="quiz-question-text">Câu ${qIndex + 1}: ${escapeHTML(q.Question)}</p>
         <div class="quiz-options-list">
           ${optionsHTML}
         </div>
@@ -1923,36 +1932,45 @@ document.addEventListener('DOMContentLoaded', () => {
     card.className = 'editor-item-card';
     card.id = cardId;
 
-    // Use a unique group name for correct option radios in this card
     const radioGroupName = `correct-option-${cardId}`;
 
     card.innerHTML = `
       <button type="button" class="btn-remove-item"><i class="fa-solid fa-trash-can"></i> Xóa câu hỏi</button>
       <div class="form-group" style="margin-top: 16px;">
         <label>Nội dung câu hỏi trắc nghiệm</label>
-        <input type="text" class="form-input q-text-input" placeholder="Nhập câu hỏi..." value="${questionText}" required>
+        <input type="text" class="form-input q-text-input" placeholder="Nhập câu hỏi..." required>
       </div>
       <div class="form-group" style="margin-bottom:0;">
         <label>Các lựa chọn và tích chọn đáp án đúng</label>
         
         <div class="quiz-option-config">
           <input type="radio" name="${radioGroupName}" value="0" ${correctIndex === 0 ? 'checked' : ''} required>
-          <input type="text" class="form-input q-opt-input" placeholder="Đáp án A" value="${options[0] || ''}" required>
+          <input type="text" class="form-input q-opt-input" placeholder="Đáp án A" required>
         </div>
         <div class="quiz-option-config">
           <input type="radio" name="${radioGroupName}" value="1" ${correctIndex === 1 ? 'checked' : ''}>
-          <input type="text" class="form-input q-opt-input" placeholder="Đáp án B" value="${options[1] || ''}" required>
+          <input type="text" class="form-input q-opt-input" placeholder="Đáp án B" required>
         </div>
         <div class="quiz-option-config">
           <input type="radio" name="${radioGroupName}" value="2" ${correctIndex === 2 ? 'checked' : ''}>
-          <input type="text" class="form-input q-opt-input" placeholder="Đáp án C" value="${options[2] || ''}" required>
+          <input type="text" class="form-input q-opt-input" placeholder="Đáp án C" required>
         </div>
         <div class="quiz-option-config">
           <input type="radio" name="${radioGroupName}" value="3" ${correctIndex === 3 ? 'checked' : ''}>
-          <input type="text" class="form-input q-opt-input" placeholder="Đáp án D" value="${options[3] || ''}" required>
+          <input type="text" class="form-input q-opt-input" placeholder="Đáp án D" required>
         </div>
       </div>
     `;
+
+    // Safely set values via JS DOM properties to prevent HTML quote attribute truncation
+    const qInput = card.querySelector('.q-text-input');
+    if (qInput) qInput.value = questionText;
+
+    const optionInputs = card.querySelectorAll('.q-opt-input');
+    if (optionInputs[0]) optionInputs[0].value = options[0] || '';
+    if (optionInputs[1]) optionInputs[1].value = options[1] || '';
+    if (optionInputs[2]) optionInputs[2].value = options[2] || '';
+    if (optionInputs[3]) optionInputs[3].value = options[3] || '';
 
     card.querySelector('.btn-remove-item').addEventListener('click', () => {
       card.remove();
