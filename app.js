@@ -29,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentThumbnailBase64: '',
     pendingVideoFile: null,
     pendingPdfFile: null,
+    pendingPdfBase64: '',
     // Video length simulation (seconds)
     SIMULATED_VIDEO_DURATION: 300 // 5 minutes
   };
@@ -894,21 +895,34 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderSlideViewer(course, initialSeconds) {
     el.learningMediaContainer.classList.remove('video-mode');
     if (course.SlideSource === 'link' || course.ContentURL) {
-      // LINK SOURCE OR LOCAL PDF SLIDES
+      // LINK SOURCE OR LOCAL / BASE64 PDF SLIDES
       const rawUrl = course.ContentURL || '';
+
+      if (rawUrl.startsWith('data:application/pdf') || rawUrl.startsWith('data:')) {
+        el.learningMediaContainer.innerHTML = `
+          <div class="slide-container" style="display: flex; flex-direction: column; width: 100%; min-height: 580px; height: auto; position: relative; background: #1a202c; border-radius: var(--radius-sm); overflow: hidden;">
+            <iframe id="slide-iframe-element" src="${rawUrl}#view=FitH" style="width: 100%; height: 580px; min-height: 460px; border: none;" allowfullscreen></iframe>
+          </div>
+        `;
+        startSimulatedWatchProgress(course, initialSeconds);
+        return;
+      }
 
       if (rawUrl === 'local-pdf') {
         el.learningMediaContainer.innerHTML = `
-          <div style="display: flex; align-items: center; justify-content: center; height: 580px; color: var(--text-muted);">
+          <div style="display: flex; align-items: center; justify-content: center; height: 480px; color: var(--text-muted);">
             <i class="fa-solid fa-spinner fa-spin" style="font-size: 32px; margin-right: 12px;"></i> Đang tải tệp PDF bài giảng...
           </div>
         `;
         window.ahcomDB.largeFileStorage.getDocument(course.CourseID).then(pdfBlob => {
           if (!pdfBlob) {
             el.learningMediaContainer.innerHTML = `
-              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 580px; text-align: center; padding: 20px;">
-                <i class="fa-solid fa-file-circle-exclamation" style="font-size: 48px; color: var(--danger); margin-bottom: 12px;"></i>
-                <p style="color: var(--danger); font-weight: 600;">Không tìm thấy tệp PDF cục bộ trên thiết bị này.</p>
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 460px; text-align: center; padding: 30px; background: #F8FAFC; border-radius: var(--radius-md);">
+                <i class="fa-solid fa-mobile-screen-button" style="font-size: 52px; color: var(--primary); margin-bottom: 12px;"></i>
+                <h4 style="font-size: 18px; color: var(--primary); margin-bottom: 8px; font-weight: 700;">Tài liệu đang được đồng bộ</h4>
+                <p style="color: var(--text-muted); font-size: 13px; max-width: 480px; margin-bottom: 16px; line-height: 1.5;">
+                  Tệp PDF này đã được tạo từ máy tính của Admin. Để học trực tiếp mượt mà trên điện thoại, Admin hãy cập nhật lại bài học bằng cách dán link Google Drive chia sẻ.
+                </p>
               </div>
             `;
             return;
@@ -1833,12 +1847,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.type !== 'application/pdf') {
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
       showToast('Vui lòng chọn tệp tin PDF hợp lệ.', 'danger');
       return;
     }
 
     state.pendingPdfFile = file;
+
+    // Convert PDF to Base64 string for cross-device syncing (mobile & desktop)
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      state.pendingPdfBase64 = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+
     el.editorPdfFileName.textContent = `Tệp đã chọn: ${file.name}`;
     el.editorPdfFileName.style.display = 'inline';
     el.btnRemovePdfFile.style.display = 'inline-flex';
@@ -1852,6 +1874,7 @@ document.addEventListener('DOMContentLoaded', () => {
   el.btnRemovePdfFile.addEventListener('click', () => {
     el.editorPdfFileInput.value = '';
     state.pendingPdfFile = null;
+    state.pendingPdfBase64 = '';
     el.editorPdfFileName.textContent = '';
     el.editorPdfFileName.style.display = 'none';
     el.btnRemovePdfFile.style.display = 'none';
@@ -2360,12 +2383,14 @@ document.addEventListener('DOMContentLoaded', () => {
       courseData.SlideSource = slideSource;
 
       if (slideSource === 'link') {
-        if (!slideUrl && !hasPendingPdf && !hasExistingLocalPdf) {
+        if (!slideUrl && !hasPendingPdf && !hasExistingLocalPdf && !state.pendingPdfBase64) {
           showToast('Vui lòng nhập đường dẫn tài liệu Slide hoặc tải tệp PDF từ máy tính.', 'danger');
           return;
         }
 
-        if (hasPendingPdf || hasExistingLocalPdf) {
+        if (state.pendingPdfBase64) {
+          courseData.ContentURL = state.pendingPdfBase64;
+        } else if (hasPendingPdf || hasExistingLocalPdf) {
           courseData.ContentURL = 'local-pdf';
         } else {
           courseData.ContentURL = slideUrl;
