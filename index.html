@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=31">
+  <link rel="stylesheet" href="styles.css?v=32">
 </head>
 <body>
 
@@ -114,11 +114,21 @@
           </div>
           <div class="form-group">
             <label for="reg-password">Mật khẩu</label>
-            <input type="password" id="reg-password" class="form-input" placeholder="Nhập mật khẩu từ 6 ký tự" required>
+            <div class="password-input-wrapper" style="position: relative; display: flex; align-items: center;">
+              <input type="password" id="reg-password" class="form-input" placeholder="Nhập mật khẩu từ 6 ký tự" required style="padding-right: 40px; width: 100%;">
+              <button type="button" id="btn-toggle-reg-password" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label for="reg-confirm-password">Xác nhận mật khẩu</label>
-            <input type="password" id="reg-confirm-password" class="form-input" placeholder="Nhập lại mật khẩu" required>
+            <div class="password-input-wrapper" style="position: relative; display: flex; align-items: center;">
+              <input type="password" id="reg-confirm-password" class="form-input" placeholder="Nhập lại mật khẩu" required style="padding-right: 40px; width: 100%;">
+              <button type="button" id="btn-toggle-reg-confirm-password" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
           </div>
           <div class="form-group">
             <label for="reg-company">Công ty thành viên</label>
@@ -135,7 +145,8 @@
           <div class="form-group">
             <label for="reg-job-level">Chức vụ</label>
             <select id="reg-job-level" class="form-input" required>
-              <option value="Staff" selected>Nhân viên</option>
+              <option value="" disabled selected>Chọn chức vụ của bạn</option>
+              <option value="Staff">Nhân viên</option>
               <option value="Manager">Quản lý</option>
             </select>
           </div>
@@ -942,10 +953,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=31"></script>
+  <script src="db.js?v=32"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=31"></script>
+  <script src="app.js?v=32"></script>
 
 </body>
 </html>

@@ -345,6 +345,42 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Toggle Register Password Show/Hide
+  const btnToggleRegPassword = document.getElementById('btn-toggle-reg-password');
+  if (btnToggleRegPassword) {
+    btnToggleRegPassword.addEventListener('click', () => {
+      const passwordInput = document.getElementById('reg-password');
+      const icon = btnToggleRegPassword.querySelector('i');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
+  }
+
+  // Toggle Register Confirm Password Show/Hide
+  const btnToggleRegConfirmPassword = document.getElementById('btn-toggle-reg-confirm-password');
+  if (btnToggleRegConfirmPassword) {
+    btnToggleRegConfirmPassword.addEventListener('click', () => {
+      const passwordInput = document.getElementById('reg-confirm-password');
+      const icon = btnToggleRegConfirmPassword.querySelector('i');
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
+  }
+
   // Submit Login
   el.formLogin.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -387,6 +423,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const company = el.regCompany.value;
     const department = el.regDept.value;
     const jobLevel = el.regJobLevel.value;
+
+    if (!company) {
+      showToast('Vui lòng chọn Công ty thành viên.', 'danger');
+      return;
+    }
+
+    if (!department) {
+      showToast('Vui lòng chọn Phòng ban làm việc.', 'danger');
+      return;
+    }
+
+    if (!jobLevel) {
+      showToast('Vui lòng chọn Chức vụ của bạn.', 'danger');
+      return;
+    }
 
     if (password.length < 6) {
       showToast('Mật khẩu phải chứa ít nhất 6 ký tự.', 'danger');
