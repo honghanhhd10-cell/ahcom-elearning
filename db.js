@@ -550,6 +550,7 @@ const db = {
         JobLevel: user.job_level,
         Role: user.role,
         Company: user.company || 'AHCOM Tổng'
+      }
     };
   },
 
