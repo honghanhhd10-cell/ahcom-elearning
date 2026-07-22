@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=40">
+  <link rel="stylesheet" href="styles.css?v=41">
 </head>
 <body>
 
@@ -275,33 +275,33 @@
       </div>
 
       <!-- Thống kê nhanh dạng thẻ -->
-      <div class="analytics-stats" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 32px;">
+      <div class="admin-stats-grid" style="margin-bottom: 24px;">
         <div class="stat-card">
           <div class="stat-icon" style="background: #EEF2FF; color: #4F46E5;"><i class="fa-solid fa-graduation-cap"></i></div>
           <div class="stat-info">
-            <h4 id="student-stat-completed">0</h4>
-            <p>Khóa học hoàn thành</p>
+            <h4>Khóa học hoàn thành</h4>
+            <p id="student-stat-completed">0</p>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background: #ECFDF5; color: #10B981;"><i class="fa-solid fa-clock"></i></div>
           <div class="stat-info">
-            <h4 id="student-stat-time">0 phút</h4>
-            <p>Thời gian học tích lũy</p>
+            <h4>Thời gian học tích lũy</h4>
+            <p id="student-stat-time">0 phút</p>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background: #FEF3C7; color: #D97706;"><i class="fa-solid fa-award"></i></div>
           <div class="stat-info">
-            <h4 id="student-stat-passed">0</h4>
-            <p>Bài thi trắc nghiệm đạt</p>
+            <h4>Bài thi trắc nghiệm đạt</h4>
+            <p id="student-stat-passed">0</p>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon" style="background: #FDF2F8; color: #DB2777;"><i class="fa-solid fa-percent"></i></div>
           <div class="stat-info">
-            <h4 id="student-stat-avg-score">0%</h4>
-            <p>Điểm thi trung bình</p>
+            <h4>Điểm thi trung bình</h4>
+            <p id="student-stat-avg-score">0%</p>
           </div>
         </div>
       </div>
@@ -1097,10 +1097,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=40"></script>
+  <script src="db.js?v=41"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=40"></script>
+  <script src="app.js?v=41"></script>
 
 </body>
 </html>
