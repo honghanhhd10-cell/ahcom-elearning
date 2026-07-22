@@ -625,175 +625,180 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- STUDENT DASHBOARD RENDERING ---
   async function renderStudentDashboard() {
-    // Set welcome text
-    document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Company || 'AHCOM Tổng'} - ${state.currentUser.Department})</span>`;
-    
-    await renderCategoryFilters();
-    const courses = await window.ahcomDB.getCourses();
-    const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
-    const quizResults = await window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
+    try {
+      // Set welcome text
+      document.getElementById('student-welcome-title').innerHTML = `Xin chào, ${state.currentUser.FullName}! <span style="font-weight:400; font-size:16px; color:var(--text-muted); display:inline-block; margin-left:8px;">(${state.currentUser.Company || 'AHCOM Tổng'} - ${state.currentUser.Department})</span>`;
+      
+      await renderCategoryFilters();
+      const courses = await window.ahcomDB.getCourses();
+      const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
+      const quizResults = await window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
 
-    // Get active filter
-    const activeFilterBtn = el.courseCategoryFilters.querySelector('.filter-btn.active');
-    const selectedCategory = activeFilterBtn ? activeFilterBtn.dataset.category : 'all';
+      // Get active filter
+      const activeFilterBtn = el.courseCategoryFilters.querySelector('.filter-btn.active');
+      const selectedCategory = activeFilterBtn ? activeFilterBtn.dataset.category : 'all';
 
-    el.coursesContainer.innerHTML = '';
+      el.coursesContainer.innerHTML = '';
 
-    // Multi-tenant course scoping
-    let filteredCourses = courses;
-    if (state.currentUser.Role !== 'SuperAdmin') {
-      const userCompany = state.currentUser.Company || 'AHCOM Tổng';
-      const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+      // Multi-tenant course scoping
+      let filteredCourses = courses;
+      if (state.currentUser.Role !== 'SuperAdmin') {
+        const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+        const userDept = state.currentUser.Department || 'Ban Giám Đốc';
 
-      filteredCourses = courses.filter(course => {
-        const compMatch = course.ScopeCompany === 'All' || course.ScopeCompany === userCompany;
-        const deptMatch = course.ScopeDepartment === 'All' || course.ScopeDepartment === userDept;
-        return compMatch && deptMatch;
-      });
-    }
-
-    // Always hide courses where IsHidden / is_hidden is true on Student Learning Dashboard
-    filteredCourses = filteredCourses.filter(course => {
-      const isHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
-      return !isHidden;
-    });
-
-    if (selectedCategory !== 'all') {
-      filteredCourses = filteredCourses.filter(c => c.Category === selectedCategory);
-    }
-
-    if (filteredCourses.length === 0) {
-      el.coursesContainer.innerHTML = `
-        <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
-          <i class="fa-solid fa-folder-open" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;"></i>
-          <p>Không có khóa học nào thuộc chuyên mục này.</p>
-        </div>
-      `;
-      return;
-    }
-
-    filteredCourses.forEach(course => {
-      const progress = progressList.find(p => p.CourseID === course.CourseID);
-      const quiz = quizResults.find(q => q.CourseID === course.CourseID);
-
-      // Calculate progress percentage
-      let percentage = 0;
-      if (progress) {
-        if (progress.IsCompleted) {
-          percentage = 100;
-        } else {
-          if (course.ContentType === 'Video') {
-            percentage = Math.min(95, Math.round((progress.WatchTimeSeconds / state.SIMULATED_VIDEO_DURATION) * 100));
-          } else if (course.ContentType === 'Slide' && course.Slides) {
-            // Estimate based on slide index equivalent stored in watch seconds
-            const slideEstimate = Math.round((progress.WatchTimeSeconds / 300) * 100);
-            percentage = Math.min(95, slideEstimate);
-          }
-        }
-      }
-
-      // Quiz badge representation
-      let quizBadge = '';
-      if (quiz) {
-        const statusClass = quiz.Status === 'Passed' ? 'passed' : 'failed';
-        const statusText = quiz.Status === 'Passed' ? 'Thi Đạt' : 'Thi Chưa Đạt';
-        quizBadge = `<span class="badge-status ${statusClass}" style="margin-left: 8px;">${statusText} (${quiz.Score}/${quiz.TotalQuestions})</span>`;
-      }
-
-      // Format category label
-      let categoryName = course.Category || 'Khóa học';
-
-      // Check access restrictions (RBAC)
-      const userRole = state.currentUser.Role;
-      const userJobLevel = state.currentUser.JobLevel || 'Staff';
-      const courseTarget = course.TargetGroup || 'All';
-
-      let isRestricted = false;
-      let restrictionReason = '';
-
-      if (userRole !== 'Admin') {
-        if (courseTarget === 'Manager' && userJobLevel !== 'Manager') {
-          isRestricted = true;
-          restrictionReason = 'Chỉ dành cho Quản lý';
-        } else if (courseTarget === 'Staff' && userJobLevel !== 'Staff') {
-          isRestricted = true;
-          restrictionReason = 'Chỉ dành cho Nhân viên';
-        }
-      }
-
-      const card = document.createElement('div');
-      card.className = 'course-card';
-      if (isRestricted) {
-        card.classList.add('course-card-locked');
-        card.style.opacity = '0.8';
-      }
-
-      const lockOverlay = isRestricted 
-        ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(1px); z-index: 2;"><div style="background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm);"><i class="fa-solid fa-lock" style="color: var(--primary); font-size: 18px;"></i></div></div>` 
-        : '';
-
-      const thumbnailImg = resolveCourseThumbnail(course);
-      const isCustomThumbnail = thumbnailImg !== '';
-
-      card.innerHTML = `
-        <div class="course-thumbnail" style="position: relative;">
-          <span class="course-tag" style="z-index: 3;">${course.Category}</span>
-          ${thumbnailImg}
-          ${course.ContentType === 'Video' 
-            ? `<i class="fa-regular fa-circle-play course-video-icon" style="${isCustomThumbnail ? 'position: relative; z-index: 2; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.6); opacity: 0.95;' : ''}"></i>` 
-            : `<i class="fa-regular fa-file-powerpoint course-slide-icon" style="${isCustomThumbnail ? 'position: relative; z-index: 2; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.6); opacity: 0.95;' : ''}"></i>`}
-          ${lockOverlay}
-        </div>
-        <div class="course-card-content">
-          <h3 class="course-title" title="${course.Title}">${course.Title}</h3>
-          
-          <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
-            <span><i class="fa-solid fa-layer-group"></i> ${categoryName}</span>
-            ${quizBadge}
-          </div>
-
-          ${isRestricted ? `
-            <div style="font-size: 12px; color: var(--primary); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
-              <i class="fa-solid fa-circle-minus"></i> Hạn chế: ${restrictionReason}
-            </div>
-          ` : ''}
-
-          <div class="course-progress-container" style="${isRestricted ? 'opacity: 0.5;' : ''}">
-            <div class="course-progress-labels">
-              <span>Tiến độ học</span>
-              <span>${percentage}%</span>
-            </div>
-            <div class="progress-bar-bg">
-              <div class="progress-bar-fill" style="width: ${percentage}%;"></div>
-            </div>
-          </div>
-
-          <div class="course-card-footer">
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
-              ${course.ContentType === 'Video' ? '<i class="fa-solid fa-video"></i> Video' : '<i class="fa-solid fa-circle-chevron-right"></i> Tài liệu Slide'}
-            </span>
-            ${isRestricted ? `
-              <button class="btn btn-secondary btn-study-now" disabled style="cursor: not-allowed; background: var(--gray-light); color: var(--text-muted); border: 1px solid var(--border-color); font-size:12px;">
-                <i class="fa-solid fa-lock"></i> Đã khóa
-              </button>
-            ` : `
-              <button class="btn btn-primary btn-study-now" data-id="${course.CourseID}">
-                ${percentage > 0 ? 'Tiếp tục học' : 'Bắt đầu học'} <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
-              </button>
-            `}
-          </div>
-        </div>
-      `;
-
-      if (!isRestricted) {
-        // Bind study button only if not restricted
-        card.querySelector('.btn-study-now').addEventListener('click', () => {
-          loadCourseViewer(course);
+        filteredCourses = courses.filter(course => {
+          const compMatch = course.ScopeCompany === 'All' || course.ScopeCompany === userCompany;
+          const deptMatch = course.ScopeDepartment === 'All' || course.ScopeDepartment === userDept;
+          return compMatch && deptMatch;
         });
       }
 
-      el.coursesContainer.appendChild(card);
-    });
+      // Always hide courses where IsHidden / is_hidden is true on Student Learning Dashboard
+      filteredCourses = filteredCourses.filter(course => {
+        const isHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
+        return !isHidden;
+      });
+
+      if (selectedCategory !== 'all') {
+        filteredCourses = filteredCourses.filter(c => c.Category === selectedCategory);
+      }
+
+      if (filteredCourses.length === 0) {
+        el.coursesContainer.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+            <i class="fa-solid fa-folder-open" style="font-size: 40px; color: var(--text-muted); margin-bottom: 12px;"></i>
+            <p>Không có khóa học nào thuộc chuyên mục này.</p>
+          </div>
+        `;
+        return;
+      }
+
+      filteredCourses.forEach(course => {
+        const progress = progressList.find(p => p.CourseID === course.CourseID);
+        const quiz = quizResults.find(q => q.CourseID === course.CourseID);
+
+        // Calculate progress percentage
+        let percentage = 0;
+        if (progress) {
+          if (progress.IsCompleted) {
+            percentage = 100;
+          } else {
+            if (course.ContentType === 'Video') {
+              percentage = Math.min(95, Math.round((progress.WatchTimeSeconds / state.SIMULATED_VIDEO_DURATION) * 100));
+            } else if (course.ContentType === 'Slide' && course.Slides) {
+              // Estimate based on slide index equivalent stored in watch seconds
+              const slideEstimate = Math.round((progress.WatchTimeSeconds / 300) * 100);
+              percentage = Math.min(95, slideEstimate);
+            }
+          }
+        }
+
+        // Quiz badge representation
+        let quizBadge = '';
+        if (quiz) {
+          const statusClass = quiz.Status === 'Passed' ? 'passed' : 'failed';
+          const statusText = quiz.Status === 'Passed' ? 'Thi Đạt' : 'Thi Chưa Đạt';
+          quizBadge = `<span class="badge-status ${statusClass}" style="margin-left: 8px;">${statusText} (${quiz.Score}/${quiz.TotalQuestions})</span>`;
+        }
+
+        // Format category label
+        let categoryName = course.Category || 'Khóa học';
+
+        // Check access restrictions (RBAC)
+        const userRole = state.currentUser.Role;
+        const userJobLevel = state.currentUser.JobLevel || 'Staff';
+        const courseTarget = course.TargetGroup || 'All';
+
+        let isRestricted = false;
+        let restrictionReason = '';
+
+        if (userRole !== 'Admin') {
+          if (courseTarget === 'Manager' && userJobLevel !== 'Manager') {
+            isRestricted = true;
+            restrictionReason = 'Chỉ dành cho Quản lý';
+          } else if (courseTarget === 'Staff' && userJobLevel !== 'Staff') {
+            isRestricted = true;
+            restrictionReason = 'Chỉ dành cho Nhân viên';
+          }
+        }
+
+        const card = document.createElement('div');
+        card.className = 'course-card';
+        if (isRestricted) {
+          card.classList.add('course-card-locked');
+          card.style.opacity = '0.8';
+        }
+
+        const lockOverlay = isRestricted 
+          ? `<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; backdrop-filter: blur(1px); z-index: 2;"><div style="background: white; width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: var(--shadow-sm);"><i class="fa-solid fa-lock" style="color: var(--primary); font-size: 18px;"></i></div></div>` 
+          : '';
+
+        const thumbnailImg = resolveCourseThumbnail(course);
+        const isCustomThumbnail = thumbnailImg !== '';
+
+        card.innerHTML = `
+          <div class="course-thumbnail" style="position: relative;">
+            <span class="course-tag" style="z-index: 3;">${course.Category}</span>
+            ${thumbnailImg}
+            ${course.ContentType === 'Video' 
+              ? `<i class="fa-regular fa-circle-play course-video-icon" style="${isCustomThumbnail ? 'position: relative; z-index: 2; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.6); opacity: 0.95;' : ''}"></i>` 
+              : `<i class="fa-regular fa-file-powerpoint course-slide-icon" style="${isCustomThumbnail ? 'position: relative; z-index: 2; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.6); opacity: 0.95;' : ''}"></i>`}
+            ${lockOverlay}
+          </div>
+          <div class="course-card-content">
+            <h3 class="course-title" title="${course.Title}">${course.Title}</h3>
+            
+            <div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+              <span><i class="fa-solid fa-layer-group"></i> ${categoryName}</span>
+              ${quizBadge}
+            </div>
+
+            ${isRestricted ? `
+              <div style="font-size: 12px; color: var(--primary); font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-circle-minus"></i> Hạn chế: ${restrictionReason}
+              </div>
+            ` : ''}
+
+            <div class="course-progress-container" style="${isRestricted ? 'opacity: 0.5;' : ''}">
+              <div class="course-progress-labels">
+                <span>Tiến độ học</span>
+                <span>${percentage}%</span>
+              </div>
+              <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${percentage}%;"></div>
+              </div>
+            </div>
+
+            <div class="course-card-footer">
+              <span style="font-size: 12px; color: var(--text-muted); font-weight: 500;">
+                ${course.ContentType === 'Video' ? '<i class="fa-solid fa-video"></i> Video' : '<i class="fa-solid fa-circle-chevron-right"></i> Tài liệu Slide'}
+              </span>
+              ${isRestricted ? `
+                <button class="btn btn-secondary btn-study-now" disabled style="cursor: not-allowed; background: var(--gray-light); color: var(--text-muted); border: 1px solid var(--border-color); font-size:12px;">
+                  <i class="fa-solid fa-lock"></i> Đã khóa
+                </button>
+              ` : `
+                <button class="btn btn-primary btn-study-now" data-id="${course.CourseID}">
+                  ${percentage > 0 ? 'Tiếp tục học' : 'Bắt đầu học'} <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
+                </button>
+              `}
+            </div>
+          </div>
+        `;
+
+        if (!isRestricted) {
+          // Bind study button only if not restricted
+          card.querySelector('.btn-study-now').addEventListener('click', () => {
+            loadCourseViewer(course);
+          });
+        }
+
+        el.coursesContainer.appendChild(card);
+      });
+    } catch (err) {
+      console.error("Lỗi renderStudentDashboard:", err);
+      showToast('Lỗi tải dữ liệu học tập: ' + err.message, 'danger');
+    }
   }
 
   // Dashboard filter click handlers
@@ -1388,69 +1393,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- ADMIN PORTAL PANEL RENDERING ---
-  // --- ADMIN PORTAL PANEL RENDERING ---
   async function renderAdminDashboard() {
-    let analytics = await window.ahcomDB.getAdminAnalytics();
-    let courses = await window.ahcomDB.getCourses();
-    
-    // RBAC tab visibility control
-    const role = state.currentUser.Role;
-    if (role === 'SuperAdmin') {
-      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'inline-flex';
-      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
-    } else if (role === 'CompanyAdmin') {
-      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
-      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
-    } else { // DeptAdmin
-      if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
-      if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'none';
-    }
+    try {
+      let analytics = await window.ahcomDB.getAdminAnalytics();
+      let courses = await window.ahcomDB.getCourses();
+      
+      // RBAC tab visibility control
+      const role = state.currentUser.Role;
+      if (role === 'SuperAdmin') {
+        if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'inline-flex';
+        if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
+      } else if (role === 'CompanyAdmin') {
+        if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
+        if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'inline-flex';
+      } else { // DeptAdmin
+        if (el.btnTabCompanies) el.btnTabCompanies.style.display = 'none';
+        if (el.btnTabDepartments) el.btnTabDepartments.style.display = 'none';
+      }
 
-    // Load static dropdown choices
-    await renderCompanyDropdowns();
-    await renderDepartmentDropdowns();
+      // Load static dropdown choices
+      await renderCompanyDropdowns();
+      await renderDepartmentDropdowns();
 
-    // Show/hide company filter select on dashboard
-    if (el.adminCompanyFilter) {
-      el.adminCompanyFilter.style.display = role === 'SuperAdmin' ? 'inline-flex' : 'none';
-    }
+      // Show/hide company filter select on dashboard
+      if (el.adminCompanyFilter) {
+        el.adminCompanyFilter.style.display = role === 'SuperAdmin' ? 'inline-flex' : 'none';
+      }
 
-    // RBAC filtering of stats and records
-    const userCompany = state.currentUser.Company || 'AHCOM Tổng';
-    const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+      // RBAC filtering of stats and records
+      const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+      const userDept = state.currentUser.Department || 'Ban Giám Đốc';
 
-    if (role === 'CompanyAdmin') {
-      analytics = analytics.filter(u => u.Company === userCompany);
-      courses = courses.filter(c => c.ScopeCompany === 'All' || c.ScopeCompany === userCompany);
-    } else if (role === 'DeptAdmin') {
-      analytics = analytics.filter(u => u.Company === userCompany && u.Department === userDept);
-      courses = courses.filter(c => (c.ScopeCompany === 'All' || c.ScopeCompany === userCompany) && (c.ScopeDepartment === 'All' || c.ScopeDepartment === userDept));
-    }
+      if (role === 'CompanyAdmin') {
+        analytics = analytics.filter(u => u.Company === userCompany);
+        courses = courses.filter(c => c.ScopeCompany === 'All' || c.ScopeCompany === userCompany);
+      } else if (role === 'DeptAdmin') {
+        analytics = analytics.filter(u => u.Company === userCompany && u.Department === userDept);
+        courses = courses.filter(c => (c.ScopeCompany === 'All' || c.ScopeCompany === userCompany) && (c.ScopeDepartment === 'All' || c.ScopeDepartment === userDept));
+      }
 
-    // Update summary counters
-    el.statTotalStudents.textContent = analytics.length;
-    el.statTotalCourses.textContent = courses.length;
+      // Update summary counters
+      el.statTotalStudents.textContent = analytics.length;
+      el.statTotalCourses.textContent = courses.length;
 
-    // Total Completed Lessons
-    let totalCompleted = 0;
-    analytics.forEach(student => {
-      totalCompleted += student.CompletedLessons.length;
-    });
-    el.statCompletedLessons.textContent = totalCompleted;
-
-    // Total Passed Quizzes
-    let totalPassedQuizzes = 0;
-    analytics.forEach(student => {
-      student.QuizHistory.forEach(quiz => {
-        if (quiz.Status === 'Đạt') {
-          totalPassedQuizzes++;
-        }
+      // Total Completed Lessons
+      let totalCompleted = 0;
+      analytics.forEach(student => {
+        totalCompleted += student.CompletedLessons.length;
       });
-    });
-    el.statPassedQuizzes.textContent = totalPassedQuizzes;
+      el.statCompletedLessons.textContent = totalCompleted;
 
-    await renderAdminTable();
+      // Total Passed Quizzes
+      let totalPassedQuizzes = 0;
+      analytics.forEach(student => {
+        student.QuizHistory.forEach(quiz => {
+          if (quiz.Status === 'Đạt') {
+            totalPassedQuizzes++;
+          }
+        });
+      });
+      el.statPassedQuizzes.textContent = totalPassedQuizzes;
+
+      await renderAdminTable();
+    } catch (err) {
+      console.error("Lỗi renderAdminDashboard:", err);
+      showToast('Lỗi tải dữ liệu quản trị: ' + err.message, 'danger');
+    }
   }
 
   // Draw admin table with filters applied
