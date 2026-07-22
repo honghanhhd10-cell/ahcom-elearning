@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navbar: document.getElementById('main-navbar'),
     navLogo: document.getElementById('nav-logo-btn'),
     navCourses: document.getElementById('nav-courses-link'),
+    navStudentReport: document.getElementById('nav-student-report-link'),
     navAdmin: document.getElementById('nav-admin-link'),
     displayUserName: document.getElementById('display-user-name'),
     displayUserRole: document.getElementById('display-user-role'),
@@ -49,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewLogin: document.getElementById('view-login'),
     viewRegister: document.getElementById('view-register'),
     viewStudentDashboard: document.getElementById('view-student-dashboard'),
+    viewStudentReport: document.getElementById('view-student-report'),
     viewCourseViewer: document.getElementById('view-course-viewer'),
     viewQuizPanel: document.getElementById('view-quiz-panel'),
     viewAdminDashboard: document.getElementById('view-admin-dashboard'),
@@ -78,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Dynamic containers
     coursesContainer: document.getElementById('courses-container'),
+    studentReportTableBody: document.getElementById('student-report-table-body'),
     courseCategoryFilters: document.getElementById('course-category-filters'),
     learningMediaContainer: document.getElementById('learning-media-container'),
     quizQuestionsList: document.getElementById('quiz-questions-list'),
@@ -305,20 +308,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Reset nav link active states
       el.navCourses.classList.remove('active');
+      if (el.navStudentReport) el.navStudentReport.classList.remove('active');
       el.navAdmin.classList.remove('active');
+
+      el.navCourses.style.display = 'inline-flex';
+      if (el.navStudentReport) el.navStudentReport.style.display = 'inline-flex';
 
       if (isAdmin) {
         el.navAdmin.style.display = 'inline-flex';
-        el.navCourses.style.display = 'inline-flex'; // Allow admin to see/test courses too
-        if (viewId === 'view-admin-dashboard') {
-          el.navAdmin.classList.add('active');
-        } else if (viewId === 'view-student-dashboard' || viewId === 'view-course-viewer') {
-          el.navCourses.classList.add('active');
-        }
       } else {
-        el.navCourses.style.display = 'inline-flex';
         el.navAdmin.style.display = 'none';
+      }
+
+      if (viewId === 'view-admin-dashboard') {
+        el.navAdmin.classList.add('active');
+      } else if (viewId === 'view-student-dashboard' || viewId === 'view-course-viewer' || viewId === 'view-quiz-panel') {
         el.navCourses.classList.add('active');
+      } else if (viewId === 'view-student-report') {
+        if (el.navStudentReport) el.navStudentReport.classList.add('active');
       }
     } else {
       el.navbar.style.display = 'none';
@@ -606,6 +613,14 @@ document.addEventListener('DOMContentLoaded', () => {
     showView('view-admin-dashboard');
   });
 
+  if (el.navStudentReport) {
+    el.navStudentReport.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderStudentReport();
+      showView('view-student-report');
+    });
+  }
+
   // Helper to resolve course thumbnail image (checks database ThumbnailURL, then YouTube auto-thumbnail)
   function resolveCourseThumbnail(course) {
     if (course.ThumbnailURL) {
@@ -798,6 +813,150 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       console.error("Lỗi renderStudentDashboard:", err);
       showToast('Lỗi tải dữ liệu học tập: ' + err.message, 'danger');
+    }
+  }
+
+  // --- PERSONAL STUDENT REPORT RENDERING ---
+  async function renderStudentReport() {
+    try {
+      const courses = await window.ahcomDB.getCourses();
+      const progressList = await window.ahcomDB.getUserProgress(state.currentUser.UserID);
+      const quizResults = await window.ahcomDB.getUserQuizResults(state.currentUser.UserID);
+
+      // Filter courses visible to the user
+      let userCourses = courses;
+      if (state.currentUser.Role !== 'SuperAdmin') {
+        const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+        const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+        userCourses = courses.filter(course => {
+          const compMatch = course.ScopeCompany === 'All' || course.ScopeCompany === userCompany;
+          const deptMatch = course.ScopeDepartment === 'All' || course.ScopeDepartment === userDept;
+          return compMatch && deptMatch;
+        });
+      }
+
+      // Filter out hidden courses
+      userCourses = userCourses.filter(course => {
+        const isHidden = course.IsHidden === true || course.is_hidden === true || String(course.IsHidden) === 'true' || String(course.is_hidden) === 'true';
+        return !isHidden;
+      });
+
+      // 1. Calculate Summary Stats
+      let completedCount = 0;
+      let totalSeconds = 0;
+      let passedQuizzes = 0;
+      let quizPercentageSum = 0;
+      let quizCount = 0;
+
+      // Track the best quiz attempt per course for statistics
+      const bestQuizzes = {};
+      quizResults.forEach(q => {
+        const key = q.CourseID;
+        const currentPercentage = q.Score / q.TotalQuestions;
+        if (!bestQuizzes[key] || (currentPercentage > bestQuizzes[key].Score / bestQuizzes[key].TotalQuestions)) {
+          bestQuizzes[key] = q;
+        }
+      });
+
+      // Summarize stats
+      progressList.forEach(p => {
+        if (p.IsCompleted) {
+          completedCount++;
+        }
+        totalSeconds += (p.WatchTimeSeconds || 0);
+      });
+
+      Object.keys(bestQuizzes).forEach(key => {
+        const q = bestQuizzes[key];
+        if (q.Status === 'Passed' || q.Status === 'Đạt') {
+          passedQuizzes++;
+        }
+        quizPercentageSum += (q.Score / q.TotalQuestions) * 100;
+        quizCount++;
+      });
+
+      const avgScore = quizCount > 0 ? Math.round(quizPercentageSum / quizCount) : 0;
+
+      // Update Stat DOM elements
+      document.getElementById('student-stat-completed').textContent = completedCount;
+      document.getElementById('student-stat-time').textContent = window.ahcomDB.formatWatchTime(totalSeconds);
+      document.getElementById('student-stat-passed').textContent = passedQuizzes;
+      document.getElementById('student-stat-avg-score').textContent = `${avgScore}%`;
+
+      // 2. Render Table Rows
+      el.studentReportTableBody.innerHTML = '';
+
+      if (userCourses.length === 0) {
+        el.studentReportTableBody.innerHTML = `
+          <tr>
+            <td colspan="6" style="text-align: center; padding: 40px; color: var(--text-muted);">
+              <i class="fa-solid fa-folder-open" style="font-size: 32px; margin-bottom: 12px;"></i>
+              <p>Bạn chưa được gán hoặc chưa có khóa học nào.</p>
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      userCourses.forEach(course => {
+        const progress = progressList.find(p => p.CourseID === course.CourseID);
+        const quiz = bestQuizzes[course.CourseID];
+
+        // Format watch time
+        let watchTimeText = '0 phút';
+        let percentage = 0;
+        if (progress) {
+          watchTimeText = window.ahcomDB.formatWatchTime(progress.WatchTimeSeconds);
+          if (progress.IsCompleted) {
+            percentage = 100;
+          } else {
+            if (course.ContentType === 'Video') {
+              percentage = Math.min(95, Math.round((progress.WatchTimeSeconds / state.SIMULATED_VIDEO_DURATION) * 100));
+            } else if (course.ContentType === 'Slide' && course.Slides) {
+              const slideEstimate = Math.round((progress.WatchTimeSeconds / 300) * 100);
+              percentage = Math.min(95, slideEstimate);
+            }
+          }
+        }
+
+        // Format quiz result representation
+        let quizStatusHTML = '<span class="badge-status" style="background: #F3F4F6; color: #6B7280; border: 1px solid #E5E7EB;"><i class="fa-regular fa-circle-question"></i> Chưa thi</span>';
+        if (quiz) {
+          const isPassed = quiz.Status === 'Passed' || quiz.Status === 'Đạt';
+          const statusClass = isPassed ? 'passed' : 'failed';
+          const statusText = isPassed ? 'Đạt' : 'Chưa Đạt';
+          quizStatusHTML = `<span class="badge-status ${statusClass}"><i class="fa-solid ${isPassed ? 'fa-circle-check' : 'fa-circle-xmark'}"></i> ${statusText} (${quiz.Score}/${quiz.TotalQuestions})</span>`;
+        }
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 600; color: var(--text-dark);">${course.Title}</div>
+          </td>
+          <td><span class="badge-category">${course.Category || 'Khóa học'}</span></td>
+          <td>
+            <span style="font-size: 13px;">
+              ${course.ContentType === 'Video' ? '<i class="fa-solid fa-video" style="color: var(--primary);"></i> Video' : '<i class="fa-solid fa-file-powerpoint" style="color: var(--secondary);"></i> Slide'}
+            </span>
+          </td>
+          <td>${watchTimeText}</td>
+          <td>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <div class="progress-bar-bg" style="width: 60px; height: 6px; margin-bottom: 0;">
+                <div class="progress-bar-fill" style="width: ${percentage}%; height: 100%;"></div>
+              </div>
+              <span style="font-size: 12px; font-weight: 600; color: var(--text-dark);">${percentage}%</span>
+            </div>
+          </td>
+          <td>${quizStatusHTML}</td>
+        `;
+
+        el.studentReportTableBody.appendChild(tr);
+      });
+
+    } catch (err) {
+      console.error("Lỗi renderStudentReport:", err);
+      showToast('Lỗi tải báo cáo cá nhân: ' + err.message, 'danger');
     }
   }
 

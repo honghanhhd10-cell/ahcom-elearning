@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=38">
+  <link rel="stylesheet" href="styles.css?v=39">
 </head>
 <body>
 
@@ -56,6 +56,9 @@
       <div class="navbar-nav-tabs">
         <a href="#" class="nav-link active" id="nav-courses-link" style="display: none;">
           <i class="fa-solid fa-book-open"></i> Khóa học của tôi
+        </a>
+        <a href="#" class="nav-link" id="nav-student-report-link" style="display: none;">
+          <i class="fa-solid fa-square-poll-vertical"></i> Báo cáo học tập
         </a>
         <a href="#" class="nav-link" id="nav-admin-link" style="display: none;">
           <i class="fa-solid fa-chart-line"></i> Thống kê Quản trị
@@ -259,6 +262,70 @@
       <!-- Danh sách khóa học dạng lưới -->
       <div class="course-grid" id="courses-container">
         <!-- Render động qua JS -->
+      </div>
+    </section>
+
+    <!-- ================= VIEW 3.5: STUDENT REPORT (BAO CAO CA NHAN HOC VIEN) ================= -->
+    <section id="view-student-report" class="view-panel" style="display: none;">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h2>Báo cáo Tiến độ Học tập & Thi cử Cá nhân</h2>
+          <p>Theo dõi quá trình tự học, thời gian tích lũy và kết quả các bài kiểm tra trắc nghiệm của bạn.</p>
+        </div>
+      </div>
+
+      <!-- Thống kê nhanh dạng thẻ -->
+      <div class="analytics-stats" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-bottom: 32px;">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #EEF2FF; color: #4F46E5;"><i class="fa-solid fa-graduation-cap"></i></div>
+          <div class="stat-info">
+            <h4 id="student-stat-completed">0</h4>
+            <p>Khóa học hoàn thành</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #ECFDF5; color: #10B981;"><i class="fa-solid fa-clock"></i></div>
+          <div class="stat-info">
+            <h4 id="student-stat-time">0 phút</h4>
+            <p>Thời gian học tích lũy</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #FEF3C7; color: #D97706;"><i class="fa-solid fa-award"></i></div>
+          <div class="stat-info">
+            <h4 id="student-stat-passed">0</h4>
+            <p>Bài thi trắc nghiệm đạt</p>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #FDF2F8; color: #DB2777;"><i class="fa-solid fa-percent"></i></div>
+          <div class="stat-info">
+            <h4 id="student-stat-avg-score">0%</h4>
+            <p>Điểm thi trung bình</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bảng báo cáo chi tiết -->
+      <div class="analytics-table-container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <h3 style="font-size: 18px; font-weight: 700; color: var(--text-dark);"><i class="fa-solid fa-list-check"></i> Chi tiết tiến độ từng khóa học</h3>
+        </div>
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th style="width: 35%;">Khóa học</th>
+              <th style="width: 15%;">Phân loại</th>
+              <th style="width: 12%;">Loại tài liệu</th>
+              <th style="width: 13%;">Đã học</th>
+              <th style="width: 10%;">Tiến độ</th>
+              <th style="width: 15%;">Kết quả thi</th>
+            </tr>
+          </thead>
+          <tbody id="student-report-table-body">
+            <!-- Render động bằng JS -->
+          </tbody>
+        </table>
       </div>
     </section>
 
@@ -1030,10 +1097,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=38"></script>
+  <script src="db.js?v=39"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=38"></script>
+  <script src="app.js?v=39"></script>
 
 </body>
 </html>
