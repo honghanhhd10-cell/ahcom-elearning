@@ -550,8 +550,36 @@ const db = {
         JobLevel: user.job_level,
         Role: user.role,
         Company: user.company || 'AHCOM Tổng'
-      }
     };
+  },
+
+  async verifyUserIdentity(empId, email) {
+    const cleanEmpId = empId.trim().toUpperCase();
+    const cleanEmail = email.trim().toLowerCase();
+
+    const { data, error } = await supabaseClient
+      .from('ahcom_users')
+      .select('user_id')
+      .eq('employee_id', cleanEmpId)
+      .eq('email', cleanEmail);
+
+    if (error || !data || data.length === 0) {
+      return { success: false, message: 'Thông tin tên đăng nhập hoặc email không khớp với tài khoản trên hệ thống.' };
+    }
+
+    return { success: true, userId: data[0].user_id };
+  },
+
+  async resetUserPassword(userId, newPassword) {
+    const { error } = await supabaseClient
+      .from('ahcom_users')
+      .update({ password: newPassword.trim() })
+      .eq('user_id', userId);
+
+    if (error) {
+      return { success: false, message: error.message };
+    }
+    return { success: true };
   },
 
   async updateUserProfile(userId, updatedData) {

@@ -464,6 +464,115 @@ document.addEventListener('DOMContentLoaded', () => {
   el.goToRegister.addEventListener('click', () => showView('view-register'));
   el.goToLogin.addEventListener('click', () => showView('view-login'));
 
+  // Go to Forgot Password
+  const goToForgotPasswordBtn = document.getElementById('go-to-forgot-password-btn');
+  if (goToForgotPasswordBtn) {
+    goToForgotPasswordBtn.addEventListener('click', () => {
+      showView('view-forgot-password');
+      const formVerify = document.getElementById('form-forgot-verify');
+      const formReset = document.getElementById('form-forgot-reset');
+      if (formVerify) formVerify.reset();
+      if (formReset) formReset.reset();
+      if (formVerify) formVerify.style.display = 'block';
+      if (formReset) formReset.style.display = 'none';
+      state.activeResetUserId = null;
+    });
+  }
+
+  // Forgot Password back to Login
+  const forgotBackToLoginBtn = document.getElementById('forgot-back-to-login-btn');
+  if (forgotBackToLoginBtn) {
+    forgotBackToLoginBtn.addEventListener('click', () => showView('view-login'));
+  }
+
+  // Toggle Forgot Passwords Show/Hide
+  const btnToggleForgot = document.getElementById('btn-toggle-forgot-password');
+  if (btnToggleForgot) {
+    btnToggleForgot.addEventListener('click', () => {
+      const input = document.getElementById('forgot-new-password');
+      const icon = btnToggleForgot.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
+  }
+
+  const btnToggleForgotConfirm = document.getElementById('btn-toggle-forgot-confirm-password');
+  if (btnToggleForgotConfirm) {
+    btnToggleForgotConfirm.addEventListener('click', () => {
+      const input = document.getElementById('forgot-confirm-password');
+      const icon = btnToggleForgotConfirm.querySelector('i');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+      } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+      }
+    });
+  }
+
+  // Forgot Password: Step 1 (Verify User)
+  const formForgotVerify = document.getElementById('form-forgot-verify');
+  if (formForgotVerify) {
+    formForgotVerify.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const empId = document.getElementById('forgot-empid').value;
+      const email = document.getElementById('forgot-email').value;
+
+      const result = await window.ahcomDB.verifyUserIdentity(empId, email);
+      if (result.success) {
+        state.activeResetUserId = result.userId;
+        document.getElementById('form-forgot-verify').style.display = 'none';
+        document.getElementById('form-forgot-reset').style.display = 'block';
+      } else {
+        showToast(result.message, 'danger');
+      }
+    });
+  }
+
+  // Forgot Password: Step 2 (Reset Password)
+  const formForgotReset = document.getElementById('form-forgot-reset');
+  if (formForgotReset) {
+    formForgotReset.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = document.getElementById('forgot-new-password').value;
+      const confirmPassword = document.getElementById('forgot-confirm-password').value;
+
+      if (!state.activeResetUserId) {
+        showToast('Phiên làm việc không hợp lệ. Vui lòng xác thực lại tài khoản.', 'danger');
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        showToast('Mật khẩu mới phải chứa ít nhất 6 ký tự.', 'danger');
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        showToast('Mật khẩu và xác nhận mật khẩu không trùng khớp.', 'danger');
+        return;
+      }
+
+      const result = await window.ahcomDB.resetUserPassword(state.activeResetUserId, newPassword);
+      if (result.success) {
+        showToast('Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.', 'success');
+        showView('view-login');
+        state.activeResetUserId = null;
+      } else {
+        showToast(result.message, 'danger', 'danger');
+      }
+    });
+  }
+
   // Logout
   el.btnLogout.addEventListener('click', () => {
     if (state.watchTimer) {

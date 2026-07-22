@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=32">
+  <link rel="stylesheet" href="styles.css?v=33">
 </head>
 <body>
 
@@ -85,8 +85,13 @@
             </button>
           </div>
         </form>
-        <div class="auth-footer">
-          Chưa có tài khoản? <button class="btn-link" id="go-to-register-btn">Đăng ký ngay</button>
+        <div class="auth-footer" style="margin-top: 15px; display: flex; flex-direction: column; gap: 8px; align-items: center;">
+          <div>
+            Chưa có tài khoản? <button class="btn-link" id="go-to-register-btn">Đăng ký ngay</button>
+          </div>
+          <div>
+            <button class="btn-link" id="go-to-forgot-password-btn" style="color: var(--text-muted); font-size: 13px;">Quên mật khẩu?</button>
+          </div>
         </div>
       </div>
     </section>
@@ -161,6 +166,67 @@
         </div>
       </div>
     </section>
+
+    <!-- ================= VIEW 2.5: QUEN MAT KHAU (FORGOT PASSWORD) ================= -->
+    <section id="view-forgot-password" class="view-panel auth-wrapper">
+      <div class="auth-card">
+        <div class="auth-header">
+          <img src="Logo AHCOM Final-01.png" alt="AHCOM Logo" style="display: block; margin: 0 auto 20px auto; height: 55px; width: auto; object-fit: contain;">
+          <h2>Cấp lại Mật khẩu</h2>
+          <p>Xác thực thông tin tài khoản để đặt lại mật khẩu mới</p>
+        </div>
+        
+        <!-- Step 1: Verify Username and Email -->
+        <form id="form-forgot-verify">
+          <div class="form-group">
+            <label for="forgot-empid">Tên đăng nhập (1Office username)</label>
+            <input type="text" id="forgot-empid" class="form-input" placeholder="Nhập tên đăng nhập 1Office của bạn" required>
+          </div>
+          <div class="form-group">
+            <label for="forgot-email">Địa chỉ Email đăng ký</label>
+            <input type="email" id="forgot-email" class="form-input" placeholder="Nhập địa chỉ Email đã dùng đăng ký" required>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              <i class="fa-solid fa-user-shield"></i> Xác thực tài khoản
+            </button>
+          </div>
+        </form>
+
+        <!-- Step 2: Input New Password (hidden by default) -->
+        <form id="form-forgot-reset" style="display: none;">
+          <div style="background: #ECFDF5; color: #065F46; border: 1px solid #A7F3D0; padding: 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 16px; text-align: center;">
+            <i class="fa-solid fa-circle-check"></i> Xác thực thông tin thành công! Vui lòng nhập mật khẩu mới.
+          </div>
+          <div class="form-group">
+            <label for="forgot-new-password">Mật khẩu mới</label>
+            <div class="password-input-wrapper" style="position: relative; display: flex; align-items: center;">
+              <input type="password" id="forgot-new-password" class="form-input" placeholder="Nhập mật khẩu mới từ 6 ký tự" required style="padding-right: 40px; width: 100%;">
+              <button type="button" id="btn-toggle-forgot-password" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="forgot-confirm-password">Xác nhận mật khẩu mới</label>
+            <div class="password-input-wrapper" style="position: relative; display: flex; align-items: center;">
+              <input type="password" id="forgot-confirm-password" class="form-input" placeholder="Nhập lại mật khẩu mới" required style="padding-right: 40px; width: 100%;">
+              <button type="button" id="btn-toggle-forgot-confirm-password" style="position: absolute; right: 10px; background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 5px;">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" style="width: 100%;">
+              <i class="fa-solid fa-key"></i> Cập nhật mật khẩu mới
+            </button>
+          </div>
+        </form>
+
+        <div class="auth-footer" style="margin-top: 15px; text-align: center;">
+          Quay lại màn hình <button class="btn-link" id="forgot-back-to-login-btn">Đăng nhập</button>
+        </div>
+      </div>
 
     <!-- ================= VIEW 3: STUDENT DASHBOARD ================= -->
     <section id="view-student-dashboard" class="view-panel">
@@ -953,10 +1019,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=32"></script>
+  <script src="db.js?v=33"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=32"></script>
+  <script src="app.js?v=33"></script>
 
 </body>
 </html>
