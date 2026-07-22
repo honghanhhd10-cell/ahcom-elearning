@@ -7,11 +7,21 @@
   
 
 
+  <!-- Diagnostic script for core app errors -->
+  <script>
+    window.addEventListener('error', function(e) {
+      const filename = (e.filename || '').toLowerCase();
+      if (filename.includes('app.js') || filename.includes('db.js')) {
+        alert("Lỗi tải tệp mã nguồn (" + (filename.split('/').pop()) + "): " + e.message);
+      }
+    });
+  </script>
+
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=36">
+  <link rel="stylesheet" href="styles.css?v=37">
 </head>
 <body>
 
@@ -1020,10 +1030,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=36"></script>
+  <script src="db.js?v=37"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=36"></script>
+  <script src="app.js?v=37"></script>
 
 </body>
 </html>
