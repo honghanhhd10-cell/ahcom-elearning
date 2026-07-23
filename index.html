@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=41">
+  <link rel="stylesheet" href="styles.css?v=42">
 </head>
 <body>
 
@@ -59,6 +59,9 @@
         </a>
         <a href="#" class="nav-link" id="nav-student-report-link" style="display: none;">
           <i class="fa-solid fa-square-poll-vertical"></i> Báo cáo học tập
+        </a>
+        <a href="#" class="nav-link" id="nav-library-link" style="display: none;">
+          <i class="fa-solid fa-bookmark"></i> Thư viện tài liệu
         </a>
         <a href="#" class="nav-link" id="nav-admin-link" style="display: none;">
           <i class="fa-solid fa-chart-line"></i> Thống kê Quản trị
@@ -329,6 +332,36 @@
       </div>
     </section>
 
+    <!-- ================= VIEW 3.7: STUDENT LIBRARY (THU VIEN TAI LIEU) ================= -->
+    <section id="view-student-library" class="view-panel">
+      <div class="dashboard-header">
+        <div class="dashboard-title">
+          <h2>Thư viện Tài liệu & Quy trình AHCOM</h2>
+          <p>Tra cứu nhanh các sách hướng dẫn, quy trình nội bộ, quy chế công ty và tài liệu tham khảo.</p>
+        </div>
+      </div>
+
+      <!-- Search and Filter Bar -->
+      <div class="admin-table-card" style="margin-bottom: 24px; padding: 20px;">
+        <div style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 250px; position: relative;">
+            <input type="text" id="library-search-input" class="form-input" placeholder="Tìm tên tài liệu..." style="padding-left: 36px; width: 100%;">
+            <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+          </div>
+          <div style="min-width: 200px;">
+            <select id="library-category-filter" class="form-input">
+              <option value="all">Tất cả Chuyên mục</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Library Grid -->
+      <div class="course-grid" id="library-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
     <!-- ================= VIEW 4: LESSON VIEWER (HOC TAP) ================= -->
     <section id="view-course-viewer" class="view-panel">
       <button class="btn-back" id="btn-back-to-dashboard">
@@ -442,6 +475,12 @@
         </button>
         <button class="admin-tab-btn" id="btn-tab-categories">
           <i class="fa-solid fa-tags"></i> Quản lý Phân loại
+        </button>
+        <button class="admin-tab-btn" id="btn-tab-library">
+          <i class="fa-solid fa-folder-open"></i> Quản lý Thư viện
+        </button>
+        <button class="admin-tab-btn" id="btn-tab-library-categories">
+          <i class="fa-solid fa-bookmark"></i> Phân loại Thư viện
         </button>
       </div>
 
@@ -752,6 +791,79 @@
           </div>
         </div>
       </div>
+
+      <!-- TAB CONTENT 7: LIBRARY MANAGEMENT (NEW) -->
+      <div class="admin-tab-content" id="tab-content-library">
+        <div class="admin-table-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
+            <h3 style="font-size: 16px; font-weight: 700; color: var(--primary); text-transform: uppercase; margin: 0;"><i class="fa-solid fa-book-bookmark"></i> Danh sách Tài liệu Thư viện</h3>
+            <button class="btn btn-primary" id="btn-admin-add-library-item">
+              <i class="fa-solid fa-plus"></i> Thêm tài liệu mới
+            </button>
+          </div>
+          <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Tên tài liệu</th>
+                  <th style="width: 15%;">Chuyên mục</th>
+                  <th style="width: 12%;">Loại tài liệu</th>
+                  <th style="width: 13%;">Công ty</th>
+                  <th style="width: 15%;">Phòng ban</th>
+                  <th style="width: 10%;">Trạng thái</th>
+                  <th style="width: 10%; text-align: center;">Hành động</th>
+                </tr>
+              </thead>
+              <tbody id="admin-library-table-body">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB CONTENT 8: LIBRARY CATEGORIES (NEW) -->
+      <div class="admin-tab-content" id="tab-content-library-categories">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: start;">
+          <div class="admin-table-card" style="padding: 24px;">
+            <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin-bottom: 16px;">
+              <i class="fa-solid fa-plus-circle"></i> Thêm chuyên mục mới
+            </h3>
+            <form id="form-admin-add-library-category">
+              <div class="form-group" style="margin-bottom: 16px;">
+                <label for="library-category-name-input">Tên chuyên mục</label>
+                <input type="text" id="library-category-name-input" class="form-input" placeholder="Ví dụ: Quy trình Kinh doanh" required>
+              </div>
+              <button type="submit" class="btn btn-primary" style="width: 100%;">
+                <i class="fa-solid fa-check"></i> Lưu chuyên mục
+              </button>
+            </form>
+          </div>
+
+          <div class="admin-table-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <h3 style="font-size: 16px; color: var(--primary); text-transform: uppercase; margin: 0;">
+                <i class="fa-solid fa-list"></i> Chuyên mục thư viện hiện tại
+              </h3>
+              <span class="badge-status passed" id="library-categories-count-badge" style="font-size: 12px; font-weight: 600;">0 chuyên mục</span>
+            </div>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+              <table class="analytics-table whitelist-table" style="table-layout: fixed; width: 100%;">
+                <thead>
+                  <tr>
+                    <th style="width: 60px; text-align: center;">STT</th>
+                    <th>Tên chuyên mục</th>
+                    <th style="width: 160px; text-align: right; padding-right: 24px;">Hành động</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-library-categories-table-body">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
   </main>
@@ -931,6 +1043,98 @@
     </div>
   </div>
 
+  <!-- ================= MODAL: LIBRARY ITEM EDITOR (POPUP SOAN THAO THU VIEN) ================= -->
+  <div class="modal-overlay" id="modal-library-item-editor">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h3 id="library-modal-title">Cấu hình Tài liệu Thư viện</h3>
+        <button class="modal-close-btn" id="btn-close-library-modal">&times;</button>
+      </div>
+      <form id="form-library-item-editor">
+        <div class="modal-body">
+          <input type="hidden" id="editor-library-item-id">
+          
+          <!-- Thông tin cơ bản -->
+          <div class="form-group">
+            <label for="editor-library-title">Tên tài liệu</label>
+            <input type="text" id="editor-library-title" class="form-input" placeholder="Nhập tên tài liệu, sách hướng dẫn, quy trình..." required>
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label for="editor-library-category">Chuyên mục thư viện</label>
+              <select id="editor-library-category" class="form-input" required>
+                <!-- Populated dynamically -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editor-library-content-type">Loại tài liệu</label>
+              <select id="editor-library-content-type" class="form-input" required>
+                <option value="Document">Tài liệu văn bản / PDF</option>
+                <option value="Video">Video tham khảo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editor-library-target-group">Đối tượng học viên</label>
+              <select id="editor-library-target-group" class="form-input" required>
+                <option value="All">Tất cả nhân sự</option>
+                <option value="Staff">Chỉ Nhân viên</option>
+                <option value="Manager">Chỉ Quản lý</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="editor-library-is-hidden">Trạng thái hiển thị</label>
+              <select id="editor-library-is-hidden" class="form-input" required>
+                <option value="false" selected>👁️ Hiển thị (Cho phép học viên xem)</option>
+                <option value="true">🔒 Ẩn tài liệu (Lưu bản nháp)</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-editor-library-scope-company">
+              <label for="editor-library-scope-company">Giới hạn Công ty</label>
+              <select id="editor-library-scope-company" class="form-input" required>
+                <option value="All">Tất cả công ty</option>
+              </select>
+            </div>
+            <div class="form-group" id="group-editor-library-scope-department">
+              <label for="editor-library-scope-department">Giới hạn Phòng ban</label>
+              <select id="editor-library-scope-department" class="form-input" required>
+                <option value="All">Tất cả phòng ban</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Nguồn tài nguyên (Link hoặc Tải lên PDF) -->
+          <div class="form-group" style="margin-top: 16px;">
+            <label for="editor-library-content-url" id="lbl-library-content-url">Đường dẫn tài liệu (Link Google Drive / Youtube / PDF)</label>
+            <input type="text" id="editor-library-content-url" class="form-input" placeholder="Nhập đường dẫn liên kết tài nguyên">
+          </div>
+
+          <!-- Tải lên tệp PDF cục bộ (Chỉ cho Document) -->
+          <div class="form-group" id="group-editor-library-pdf" style="margin-top: 16px;">
+            <label>Hoặc tải tệp tin PDF từ máy tính</label>
+            <div style="display: flex; gap: 12px; align-items: center; margin-top: 8px;">
+              <input type="file" id="editor-library-pdf-file-input" accept="application/pdf" style="display: none;">
+              <button type="button" class="btn btn-secondary" id="btn-upload-library-pdf" style="padding: 8px 14px; font-size: 13px;">
+                <i class="fa-solid fa-file-pdf"></i> Chọn tệp PDF
+              </button>
+              <span id="editor-library-pdf-file-name" style="font-size: 13px; font-weight: 600; color: var(--success); display: none;"></span>
+              <button type="button" class="btn btn-secondary" id="btn-remove-library-pdf-file" style="padding: 4px 8px; font-size: 11px; color: var(--danger); display: none; border-color: var(--danger); background: none;">
+                Xóa file
+              </button>
+            </div>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-library-modal">Hủy bỏ</button>
+          <button type="submit" class="btn btn-success">
+            <i class="fa-solid fa-floppy-disk"></i> Lưu tài liệu
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- ================= MODAL: ADMIN USER EDITOR (POPUP SUA THANH VIEN) ================= -->
   <div class="modal-overlay" id="modal-user-editor">
     <div class="modal-container" style="max-width: 500px;">
@@ -1097,10 +1301,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=41"></script>
+  <script src="db.js?v=42"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=41"></script>
+  <script src="app.js?v=42"></script>
 
 </body>
 </html>

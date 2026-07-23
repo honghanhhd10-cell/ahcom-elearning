@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     pendingVideoFile: null,
     pendingPdfFile: null,
     pendingPdfBase64: '',
+    viewerOrigin: 'dashboard',
+    currentLibraryPdfFile: null,
+    currentLibraryPdfBase64: '',
+    activeLibraryItem: null,
     // Video length simulation (seconds)
     SIMULATED_VIDEO_DURATION: 300 // 5 minutes
   };
@@ -41,6 +45,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navLogo: document.getElementById('nav-logo-btn'),
     navCourses: document.getElementById('nav-courses-link'),
     navStudentReport: document.getElementById('nav-student-report-link'),
+    navLibrary: document.getElementById('nav-library-link'),
     navAdmin: document.getElementById('nav-admin-link'),
     displayUserName: document.getElementById('display-user-name'),
     displayUserRole: document.getElementById('display-user-role'),
@@ -51,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
     viewRegister: document.getElementById('view-register'),
     viewStudentDashboard: document.getElementById('view-student-dashboard'),
     viewStudentReport: document.getElementById('view-student-report'),
+    viewStudentLibrary: document.getElementById('view-student-library'),
     viewCourseViewer: document.getElementById('view-course-viewer'),
     viewQuizPanel: document.getElementById('view-quiz-panel'),
     viewAdminDashboard: document.getElementById('view-admin-dashboard'),
@@ -59,6 +65,20 @@ document.addEventListener('DOMContentLoaded', () => {
     formLogin: document.getElementById('form-login'),
     formRegister: document.getElementById('form-register'),
     formQuiz: document.getElementById('form-quiz-questions'),
+    formLibraryItemEditor: document.getElementById('form-library-item-editor'),
+
+    // Library elements
+    libraryContainer: document.getElementById('library-container'),
+    librarySearchInput: document.getElementById('library-search-input'),
+    libraryCategoryFilter: document.getElementById('library-category-filter'),
+    adminLibraryTableBody: document.getElementById('admin-library-table-body'),
+    adminLibraryCategoriesTableBody: document.getElementById('admin-library-categories-table-body'),
+    btnAdminAddLibraryItem: document.getElementById('btn-admin-add-library-item'),
+    modalLibraryItemEditor: document.getElementById('modal-library-item-editor'),
+    btnUploadLibraryPdf: document.getElementById('btn-upload-library-pdf'),
+    editorLibraryPdfFileInput: document.getElementById('editor-library-pdf-file-input'),
+    editorLibraryPdfFileName: document.getElementById('editor-library-pdf-file-name'),
+    btnRemoveLibraryPdfFile: document.getElementById('btn-remove-library-pdf-file'),
 
     // Inputs
     loginIdentity: document.getElementById('login-identity'),
@@ -227,7 +247,25 @@ document.addEventListener('DOMContentLoaded', () => {
     formAddCategory: document.getElementById('form-add-category'),
     categoryNameInput: document.getElementById('category-name-input'),
     adminCategoriesTableBody: document.getElementById('admin-categories-table-body'),
-    categoriesCountBadge: document.getElementById('categories-count-badge')
+    categoriesCountBadge: document.getElementById('categories-count-badge'),
+
+    // Library tab references
+    btnTabLibrary: document.getElementById('btn-tab-library'),
+    btnTabLibraryCategories: document.getElementById('btn-tab-library-categories'),
+    tabContentLibrary: document.getElementById('tab-content-library'),
+    tabContentLibraryCategories: document.getElementById('tab-content-library-categories'),
+    formAdminAddLibraryCategory: document.getElementById('form-admin-add-library-category'),
+    libraryCategoryNameInput: document.getElementById('library-category-name-input'),
+    libraryCategoriesCountBadge: document.getElementById('library-categories-count-badge'),
+    editorLibraryTitle: document.getElementById('editor-library-title'),
+    editorLibraryCategory: document.getElementById('editor-library-category'),
+    editorLibraryContentType: document.getElementById('editor-library-content-type'),
+    editorLibraryTargetGroup: document.getElementById('editor-library-target-group'),
+    editorLibraryIsHidden: document.getElementById('editor-library-is-hidden'),
+    editorLibraryScopeCompany: document.getElementById('editor-library-scope-company'),
+    editorLibraryScopeDepartment: document.getElementById('editor-library-scope-department'),
+    editorLibraryContentUrl: document.getElementById('editor-library-content-url'),
+    editorLibraryItemId: document.getElementById('editor-library-item-id')
   };
 
   // --- TOAST NOTIFICATIONS ---
@@ -309,10 +347,12 @@ document.addEventListener('DOMContentLoaded', () => {
       // Reset nav link active states
       el.navCourses.classList.remove('active');
       if (el.navStudentReport) el.navStudentReport.classList.remove('active');
+      if (el.navLibrary) el.navLibrary.classList.remove('active');
       el.navAdmin.classList.remove('active');
 
       el.navCourses.style.display = 'inline-flex';
       if (el.navStudentReport) el.navStudentReport.style.display = 'inline-flex';
+      if (el.navLibrary) el.navLibrary.style.display = 'inline-flex';
 
       if (isAdmin) {
         el.navAdmin.style.display = 'inline-flex';
@@ -326,6 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
         el.navCourses.classList.add('active');
       } else if (viewId === 'view-student-report') {
         if (el.navStudentReport) el.navStudentReport.classList.add('active');
+      } else if (viewId === 'view-student-library') {
+        if (el.navLibrary) el.navLibrary.classList.add('active');
       }
     } else {
       el.navbar.style.display = 'none';
@@ -618,6 +660,14 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       renderStudentReport();
       showView('view-student-report');
+    });
+  }
+
+  if (el.navLibrary) {
+    el.navLibrary.addEventListener('click', (e) => {
+      e.preventDefault();
+      renderStudentLibrary();
+      showView('view-student-library');
     });
   }
 
@@ -959,6 +1009,570 @@ document.addEventListener('DOMContentLoaded', () => {
       showToast('Lỗi tải báo cáo cá nhân: ' + err.message, 'danger');
     }
   }
+
+  // --- STUDENT LIBRARY VIEW RENDERING ---
+  async function renderStudentLibrary() {
+    try {
+      const items = await window.ahcomDB.getLibraryItems();
+      const categories = await window.ahcomDB.getLibraryCategories();
+
+      // Populate student view category filter select element
+      const filterSelect = el.libraryCategoryFilter;
+      const currentSelectedFilter = filterSelect.value || 'all';
+      filterSelect.innerHTML = '<option value="all">Tất cả Chuyên mục</option>';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        if (cat === currentSelectedFilter) opt.selected = true;
+        filterSelect.appendChild(opt);
+      });
+
+      // Filter visible items based on RBAC rules (ScopeCompany, ScopeDepartment, TargetGroup)
+      let visibleItems = items;
+      if (state.currentUser.Role !== 'SuperAdmin') {
+        const userCompany = state.currentUser.Company || 'AHCOM Tổng';
+        const userDept = state.currentUser.Department || 'Ban Giám Đốc';
+        const userJobLevel = state.currentUser.JobLevel || 'Staff'; // 'Staff' or 'Manager'
+
+        visibleItems = items.filter(item => {
+          // Company Scope Match
+          const compMatch = item.ScopeCompany === 'All' || item.ScopeCompany === userCompany;
+          // Department Scope Match
+          const deptMatch = item.ScopeDepartment === 'All' || item.ScopeDepartment === userDept;
+          // Target Group Match
+          const groupMatch = item.TargetGroup === 'All' || item.TargetGroup === userJobLevel;
+
+          return compMatch && deptMatch && groupMatch;
+        });
+      }
+
+      // Filter out hidden items
+      visibleItems = visibleItems.filter(item => !item.IsHidden);
+
+      // Search Filter
+      const searchText = (el.librarySearchInput.value || '').trim().toLowerCase();
+      if (searchText) {
+        visibleItems = visibleItems.filter(item => item.Title.toLowerCase().includes(searchText));
+      }
+
+      // Category Filter Select
+      const selectedCategory = filterSelect.value || 'all';
+      if (selectedCategory !== 'all') {
+        visibleItems = visibleItems.filter(item => item.Category === selectedCategory);
+      }
+
+      // Render Library Items Grid
+      el.libraryContainer.innerHTML = '';
+
+      if (visibleItems.length === 0) {
+        el.libraryContainer.innerHTML = `
+          <div style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; color: var(--text-muted);">
+            <i class="fa-solid fa-folder-open" style="font-size: 48px; margin-bottom: 16px; color: var(--text-muted);"></i>
+            <h3 style="font-size: 18px; font-weight: 600; color: var(--text-dark); margin-bottom: 8px;">Không tìm thấy tài liệu nào</h3>
+            <p>Vui lòng thử từ khóa khác hoặc liên hệ Admin.</p>
+          </div>
+        `;
+        return;
+      }
+
+      visibleItems.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'course-card';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+
+        // Resolve thumbnail
+        let thumbnailHTML = `<i class="fa-solid fa-file-invoice" style="font-size: 40px; color: var(--primary);"></i>`;
+        if (item.ThumbnailURL) {
+          thumbnailHTML = `<img src="${item.ThumbnailURL}" alt="${item.Title}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;">`;
+        } else if (item.ContentType === 'Video') {
+          // Attempt YouTube thumbnail
+          if (item.ContentURL) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = item.ContentURL.match(regExp);
+            if (match && match[2].length === 11) {
+              const youtubeId = match[2];
+              thumbnailHTML = `<img src="https://img.youtube.com/vi/${youtubeId}/mqdefault.jpg" alt="${item.Title}" style="width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; z-index: 1;">`;
+            } else {
+              thumbnailHTML = `<i class="fa-solid fa-video" style="font-size: 40px; color: var(--primary);"></i>`;
+            }
+          }
+        } else {
+          thumbnailHTML = `<i class="fa-solid fa-file-pdf" style="font-size: 40px; color: var(--secondary);"></i>`;
+        }
+
+        card.innerHTML = `
+          <div style="position: relative; aspect-ratio: 16 / 9; background-color: #F3F4F6; border-radius: var(--radius-md) var(--radius-md) 0 0; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+            ${thumbnailHTML}
+            <span class="course-tag" style="position: absolute; top: 12px; left: 12px; z-index: 2;">${item.Category}</span>
+          </div>
+          <div class="course-body" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; flex: 1;">
+            <div>
+              <h3 class="course-title" style="font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; height: 40px;">${item.Title}</h3>
+              <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                <span style="font-size: 12px; color: var(--text-muted);">
+                  ${item.ContentType === 'Video' ? '<i class="fa-solid fa-video" style="color: var(--primary);"></i> Video' : '<i class="fa-solid fa-file-pdf" style="color: var(--secondary);"></i> Tài liệu'}
+                </span>
+              </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <button class="btn btn-primary btn-view-doc" style="width: 100%; justify-content: center; font-size: 13px;">
+                <i class="fa-solid fa-eye"></i> Xem tài liệu
+              </button>
+            </div>
+          </div>
+        `;
+
+        card.querySelector('.btn-view-doc').addEventListener('click', () => {
+          loadLibraryViewer(item);
+        });
+
+        el.libraryContainer.appendChild(card);
+      });
+
+    } catch (err) {
+      console.error("Lỗi renderStudentLibrary:", err);
+      showToast('Lỗi tải thư viện tài liệu: ' + err.message, 'danger');
+    }
+  }
+
+  // --- LIBRARY VIEWER INTEGRATION ---
+  function loadLibraryViewer(item) {
+    if (item.ContentType === 'Document' && item.ContentURL && !item.ContentURL.startsWith('data:application/pdf') && item.ContentURL !== 'local-pdf') {
+      window.open(item.ContentURL, '_blank');
+      return;
+    }
+
+    state.viewerOrigin = 'library';
+    state.activeLibraryItem = item;
+    
+    showView('view-course-viewer');
+    el.viewerCourseTitle.textContent = item.Title;
+    el.viewerMetaCategory.textContent = item.Category;
+    el.viewerMetaType.textContent = item.ContentType === 'Video' ? 'Thư viện Video' : 'Thư viện Tài liệu';
+    
+    // Hide progress stats for library
+    el.viewerMetaWatchTime.parentElement.style.display = 'none';
+    el.viewerMetaStatus.parentElement.style.display = 'none';
+    
+    // Hide quiz actions panel for library items
+    const rightPanel = document.querySelector('.viewer-sidebar');
+    if (rightPanel) rightPanel.style.display = 'none';
+    
+    const mainCol = document.querySelector('.viewer-main');
+    if (mainCol) mainCol.style.width = '100%';
+
+    if (item.ContentType === 'Video') {
+      const isYouTube = item.ContentURL.includes('youtube.com') || item.ContentURL.includes('youtu.be');
+      if (isYouTube) {
+        let videoId = '';
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+        const match = item.ContentURL.match(regExp);
+        if (match && match[2].length === 11) {
+          videoId = match[2];
+        }
+        el.learningMediaContainer.innerHTML = `
+          <div style="position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: var(--radius-md); box-shadow: var(--shadow-md);">
+            <iframe src="https://www.youtube.com/embed/${videoId}" style="position: absolute; top:0; left:0; width:100%; height:100%; border:none;" allowfullscreen></iframe>
+          </div>
+        `;
+      } else {
+        el.learningMediaContainer.innerHTML = `
+          <video controls controlsList="nodownload" style="width: 100%; max-height: 500px; border-radius: var(--radius-md); box-shadow: var(--shadow-md); background: #000;">
+            <source src="${item.ContentURL}" type="video/mp4">
+            Trình duyệt của bạn không hỗ trợ phát video này.
+          </video>
+        `;
+      }
+    } else {
+      // Document
+      if (item.ContentURL.startsWith('data:application/pdf') || item.ContentURL.startsWith('data:')) {
+        el.learningMediaContainer.innerHTML = `
+          <iframe src="${item.ContentURL}" style="width: 100%; height: 600px; border: none; border-radius: var(--radius-md); box-shadow: var(--shadow-md);"></iframe>
+        `;
+      } else {
+        el.learningMediaContainer.innerHTML = `
+          <div style="text-align: center; padding: 40px; color: var(--text-muted);">
+            <i class="fa-solid fa-file-pdf" style="font-size: 48px; color: var(--secondary); margin-bottom: 16px;"></i>
+            <p>Không thể xem trực tiếp tài liệu này.</p>
+            <a href="${item.ContentURL}" target="_blank" class="btn btn-primary" style="margin-top: 12px; display: inline-flex; align-items: center; gap: 8px;">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Mở tài liệu ở tab mới
+            </a>
+          </div>
+        `;
+      }
+    }
+  }
+
+  el.librarySearchInput.addEventListener('input', () => {
+    renderStudentLibrary();
+  });
+
+  el.libraryCategoryFilter.addEventListener('change', () => {
+    renderStudentLibrary();
+  });
+
+  // --- ADMIN LIBRARY CONFIGURATION LOGIC ---
+  async function renderAdminLibraryTable() {
+    try {
+      const items = await window.ahcomDB.getLibraryItems();
+      el.adminLibraryTableBody.innerHTML = '';
+
+      if (items.length === 0) {
+        el.adminLibraryTableBody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align: center; padding: 20px; color: var(--text-muted);">
+              Chưa có tài liệu nào trong thư viện. Vui lòng bấm "Thêm tài liệu mới".
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        
+        const isHidden = item.IsHidden;
+        const statusBadge = isHidden 
+          ? `<span class="badge-status failed"><i class="fa-solid fa-lock"></i> Ẩn</span>`
+          : `<span class="badge-status passed"><i class="fa-solid fa-eye"></i> Hiện</span>`;
+
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 600; color: var(--text-dark);">${item.Title}</div>
+          </td>
+          <td><span class="badge-category">${item.Category}</span></td>
+          <td>
+            <span style="font-size: 13px;">
+              ${item.ContentType === 'Video' ? '<i class="fa-solid fa-video" style="color: var(--primary);"></i> Video' : '<i class="fa-solid fa-file-pdf" style="color: var(--secondary);"></i> Tài liệu'}
+            </span>
+          </td>
+          <td>${item.ScopeCompany === 'All' ? 'Tất cả' : item.ScopeCompany}</td>
+          <td>${item.ScopeDepartment === 'All' ? 'Tất cả' : item.ScopeDepartment}</td>
+          <td>${statusBadge}</td>
+          <td style="text-align: center;">
+            <div style="display: flex; gap: 8px; justify-content: center;">
+              <button class="btn btn-secondary btn-edit-lib" style="padding: 4px 8px; font-size: 12px;" data-id="${item.ItemID}"><i class="fa-solid fa-pen"></i></button>
+              <button class="btn btn-danger btn-delete-lib" style="padding: 4px 8px; font-size: 12px;" data-id="${item.ItemID}"><i class="fa-solid fa-trash-can"></i></button>
+            </div>
+          </td>
+        `;
+
+        // Bind Edit button
+        tr.querySelector('.btn-edit-lib').addEventListener('click', () => {
+          openLibraryModal(item);
+        });
+
+        // Bind Delete button
+        tr.querySelector('.btn-delete-lib').addEventListener('click', async () => {
+          if (confirm(`Bạn chắc chắn muốn xóa tài liệu "${item.Title}" khỏi thư viện?`)) {
+            try {
+              await window.ahcomDB.deleteLibraryItem(item.ItemID);
+              showToast('Đã xóa tài liệu khỏi thư viện.', 'success');
+              renderAdminLibraryTable();
+            } catch (err) {
+              showToast('Lỗi khi xóa: ' + err.message, 'danger');
+            }
+          }
+        });
+
+        el.adminLibraryTableBody.appendChild(tr);
+      });
+    } catch (err) {
+      console.error("Lỗi renderAdminLibraryTable:", err);
+      showToast('Lỗi tải bảng quản trị thư viện: ' + err.message, 'danger');
+    }
+  }
+
+  async function openLibraryModal(item = null) {
+    try {
+      // 1. Populate category dropdown
+      const categories = await window.ahcomDB.getLibraryCategories();
+      el.editorLibraryCategory.innerHTML = '';
+      categories.forEach(cat => {
+        const opt = document.createElement('option');
+        opt.value = cat;
+        opt.textContent = cat;
+        el.editorLibraryCategory.appendChild(opt);
+      });
+
+      // 2. Populate company and department dropdowns
+      const companies = await window.ahcomDB.getCompanies();
+      el.editorLibraryScopeCompany.innerHTML = '<option value="All">Tất cả công ty</option>';
+      companies.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c;
+        opt.textContent = c;
+        el.editorLibraryScopeCompany.appendChild(opt);
+      });
+
+      const departments = await window.ahcomDB.getDepartments();
+      el.editorLibraryScopeDepartment.innerHTML = '<option value="All">Tất cả phòng ban</option>';
+      departments.forEach(d => {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d;
+        el.editorLibraryScopeDepartment.appendChild(opt);
+      });
+
+      // Reset local file states
+      state.currentLibraryPdfFile = null;
+      state.currentLibraryPdfBase64 = '';
+      el.editorLibraryPdfFileName.textContent = '';
+      el.editorLibraryPdfFileName.style.display = 'none';
+      el.btnRemoveLibraryPdfFile.style.display = 'none';
+
+      if (item) {
+        // Edit Mode
+        document.getElementById('library-modal-title').textContent = 'Chỉnh sửa Tài liệu Thư viện';
+        el.editorLibraryItemId.value = item.ItemID;
+        el.editorLibraryTitle.value = item.Title;
+        el.editorLibraryCategory.value = item.Category;
+        el.editorLibraryContentType.value = item.ContentType;
+        el.editorLibraryTargetGroup.value = item.TargetGroup;
+        el.editorLibraryIsHidden.value = String(item.IsHidden);
+        el.editorLibraryScopeCompany.value = item.ScopeCompany;
+        el.editorLibraryScopeDepartment.value = item.ScopeDepartment;
+
+        if (item.ContentURL.startsWith('data:application/pdf') || item.ContentURL.startsWith('data:')) {
+          state.currentLibraryPdfBase64 = item.ContentURL;
+          el.editorLibraryContentUrl.value = '';
+          el.editorLibraryPdfFileName.textContent = 'Tập tin: [PDF đã lưu]';
+          el.editorLibraryPdfFileName.style.display = 'inline';
+          el.btnRemoveLibraryPdfFile.style.display = 'inline-flex';
+        } else {
+          el.editorLibraryContentUrl.value = item.ContentURL;
+        }
+      } else {
+        // Add Mode
+        document.getElementById('library-modal-title').textContent = 'Thêm tài liệu mới vào Thư viện';
+        el.editorLibraryItemId.value = '';
+        el.editorLibraryTitle.value = '';
+        el.editorLibraryContentType.value = 'Document';
+        el.editorLibraryTargetGroup.value = 'All';
+        el.editorLibraryIsHidden.value = 'false';
+        el.editorLibraryScopeCompany.value = 'All';
+        el.editorLibraryScopeDepartment.value = 'All';
+        el.editorLibraryContentUrl.value = '';
+      }
+
+      // Hide or show local PDF section based on ContentType selection
+      toggleLibraryPdfSection();
+
+      el.modalLibraryItemEditor.classList.add('active');
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi khi mở modal: ' + err.message, 'danger');
+    }
+  }
+
+  function toggleLibraryPdfSection() {
+    const isDoc = el.editorLibraryContentType.value === 'Document';
+    const pdfSection = document.getElementById('group-editor-library-pdf');
+    if (pdfSection) {
+      pdfSection.style.display = isDoc ? 'block' : 'none';
+    }
+  }
+
+  el.editorLibraryContentType.addEventListener('change', () => {
+    toggleLibraryPdfSection();
+  });
+
+  // Open modal on Add button click
+  el.btnAdminAddLibraryItem.addEventListener('click', () => {
+    openLibraryModal();
+  });
+
+  // Close Library modal
+  document.getElementById('btn-close-library-modal').addEventListener('click', () => {
+    el.modalLibraryItemEditor.classList.remove('active');
+  });
+  document.getElementById('btn-cancel-library-modal').addEventListener('click', () => {
+    el.modalLibraryItemEditor.classList.remove('active');
+  });
+
+  // Local PDF File Selector for Library
+  el.btnUploadLibraryPdf.addEventListener('click', () => {
+    el.editorLibraryPdfFileInput.click();
+  });
+
+  el.editorLibraryPdfFileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      showToast('Vui lòng chọn tập tin PDF hợp lệ.', 'danger');
+      return;
+    }
+
+    state.currentLibraryPdfFile = file;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      state.currentLibraryPdfBase64 = evt.target.result;
+    };
+    reader.readAsDataURL(file);
+
+    el.editorLibraryPdfFileName.textContent = `Tệp đã chọn: ${file.name}`;
+    el.editorLibraryPdfFileName.style.display = 'inline';
+    el.btnRemoveLibraryPdfFile.style.display = 'inline-flex';
+  });
+
+  el.btnRemoveLibraryPdfFile.addEventListener('click', () => {
+    el.editorLibraryPdfFileInput.value = '';
+    state.currentLibraryPdfFile = null;
+    state.currentLibraryPdfBase64 = '';
+    el.editorLibraryPdfFileName.textContent = '';
+    el.editorLibraryPdfFileName.style.display = 'none';
+    el.btnRemoveLibraryPdfFile.style.display = 'none';
+  });
+
+  // Submit form action
+  el.formLibraryItemEditor.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const itemId = el.editorLibraryItemId.value;
+      const title = el.editorLibraryTitle.value.trim();
+      const category = el.editorLibraryCategory.value;
+      const contentType = el.editorLibraryContentType.value;
+      const targetGroup = el.editorLibraryTargetGroup.value;
+      const isHidden = el.editorLibraryIsHidden.value === 'true';
+      const scopeCompany = el.editorLibraryScopeCompany.value;
+      const scopeDepartment = el.editorLibraryScopeDepartment.value;
+      let contentUrl = el.editorLibraryContentUrl.value.trim();
+
+      if (contentType === 'Document' && state.currentLibraryPdfBase64) {
+        contentUrl = state.currentLibraryPdfBase64;
+      }
+
+      if (!title) {
+        showToast('Vui lòng nhập tên tài liệu.', 'danger');
+        return;
+      }
+
+      if (!contentUrl) {
+        showToast('Vui lòng nhập liên kết hoặc tải lên file PDF.', 'danger');
+        return;
+      }
+
+      const itemData = {
+        ItemID: itemId || null,
+        Title: title,
+        Category: category,
+        ContentType: contentType,
+        TargetGroup: targetGroup,
+        IsHidden: isHidden,
+        ScopeCompany: scopeCompany,
+        ScopeDepartment: scopeDepartment,
+        ContentURL: contentUrl,
+        CreatedByUserId: state.currentUser ? state.currentUser.UserID : null
+      };
+
+      await window.ahcomDB.saveLibraryItem(itemData);
+      showToast('Đã lưu cấu hình tài liệu thư viện thành công.', 'success');
+      el.modalLibraryItemEditor.classList.remove('active');
+      renderAdminLibraryTable();
+    } catch (err) {
+      showToast('Lỗi khi lưu tài liệu: ' + err.message, 'danger');
+    }
+  });
+
+  // --- ADMIN LIBRARY CATEGORIES RENDER ---
+  async function renderAdminLibraryCategoriesTable() {
+    try {
+      const categories = await window.ahcomDB.getLibraryCategories();
+      el.libraryCategoriesCountBadge.textContent = `${categories.length} chuyên mục`;
+      el.adminLibraryCategoriesTableBody.innerHTML = '';
+
+      if (categories.length === 0) {
+        el.adminLibraryCategoriesTableBody.innerHTML = `
+          <tr>
+            <td colspan="3" style="text-align: center; color: var(--text-muted); padding: 20px;">
+              Chưa có chuyên mục thư viện nào.
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      categories.forEach((cat, index) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="text-align: center; font-weight: 600;">${index + 1}</td>
+          <td>
+            <div style="font-weight: 600; color: var(--text-dark);">${cat}</div>
+          </td>
+          <td style="text-align: right; padding-right: 24px;">
+            <div style="display: flex; gap: 8px; justify-content: flex-end;">
+              <button class="btn btn-secondary btn-edit-lib-cat" style="padding: 4px 8px; font-size: 12px;" data-name="${cat}"><i class="fa-solid fa-pen"></i> Sửa</button>
+              <button class="btn btn-danger btn-delete-lib-cat" style="padding: 4px 8px; font-size: 12px;" data-name="${cat}"><i class="fa-solid fa-trash-can"></i> Xóa</button>
+            </div>
+          </td>
+        `;
+
+        // Edit category
+        tr.querySelector('.btn-edit-lib-cat').addEventListener('click', async () => {
+          const newName = prompt(`Nhập tên mới cho chuyên mục thư viện "${cat}":`, cat);
+          if (newName && newName.trim() && newName.trim() !== cat) {
+            try {
+              const res = await window.ahcomDB.updateLibraryCategory(cat, newName);
+              if (res.success) {
+                showToast(res.message, 'success');
+                renderAdminLibraryCategoriesTable();
+              } else {
+                showToast(res.message, 'danger');
+              }
+            } catch (err) {
+              showToast('Lỗi: ' + err.message, 'danger');
+            }
+          }
+        });
+
+        // Delete category
+        tr.querySelector('.btn-delete-lib-cat').addEventListener('click', async () => {
+          if (confirm(`Bạn chắc chắn muốn xóa chuyên mục thư viện "${cat}"?`)) {
+            try {
+              const res = await window.ahcomDB.deleteLibraryCategory(cat);
+              if (res.success) {
+                showToast(res.message, 'success');
+                renderAdminLibraryCategoriesTable();
+              } else {
+                showToast(res.message, 'danger');
+              }
+            } catch (err) {
+              showToast('Lỗi: ' + err.message, 'danger');
+            }
+          }
+        });
+
+        el.adminLibraryCategoriesTableBody.appendChild(tr);
+      });
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi tải danh mục thư viện: ' + err.message, 'danger');
+    }
+  }
+
+  // Submit add library category form
+  el.formAdminAddLibraryCategory.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const name = el.libraryCategoryNameInput.value.trim();
+      if (!name) return;
+
+      const res = await window.ahcomDB.addLibraryCategory(name);
+      if (res.success) {
+        showToast(res.message, 'success');
+        el.libraryCategoryNameInput.value = '';
+        renderAdminLibraryCategoriesTable();
+      } else {
+        showToast(res.message, 'danger');
+      }
+    } catch (err) {
+      showToast('Lỗi: ' + err.message, 'danger');
+    }
+  });
 
   // Dashboard filter click handlers
   el.courseCategoryFilters.addEventListener('click', (e) => {
@@ -1396,8 +2010,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Back to dashboard
   el.btnBackToDashboard.addEventListener('click', async () => {
-    await renderStudentDashboard();
-    showView('view-student-dashboard');
+    // Restore default viewer layout styling
+    const rightPanel = document.querySelector('.viewer-sidebar');
+    if (rightPanel) rightPanel.style.display = '';
+    const mainCol = document.querySelector('.viewer-main');
+    if (mainCol) mainCol.style.width = '';
+    
+    // Restore watch time and progress status elements
+    el.viewerMetaWatchTime.parentElement.style.display = '';
+    el.viewerMetaStatus.parentElement.style.display = '';
+
+    if (state.viewerOrigin === 'library') {
+      await renderStudentLibrary();
+      showView('view-student-library');
+    } else {
+      await renderStudentDashboard();
+      showView('view-student-dashboard');
+    }
   });
 
   // --- QUIZ INTERACTIVE VIEW ---
@@ -3753,8 +4382,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Tab controller helper (NEW)
   function switchTab(activeTabBtn, activeTabContent, loadCallback = null) {
-    const tabBtns = [el.btnTabAnalytics, el.btnTabCourses, el.btnTabWhitelist, el.btnTabDepartments, el.btnTabCompanies, el.btnTabCategories];
-    const tabContents = [el.tabContentAnalytics, el.tabContentCourses, el.tabContentWhitelist, el.tabContentDepartments, el.tabContentCompanies, el.tabContentCategories];
+    const tabBtns = [el.btnTabAnalytics, el.btnTabCourses, el.btnTabWhitelist, el.btnTabDepartments, el.btnTabCompanies, el.btnTabCategories, el.btnTabLibrary, el.btnTabLibraryCategories];
+    const tabContents = [el.tabContentAnalytics, el.tabContentCourses, el.tabContentWhitelist, el.tabContentDepartments, el.tabContentCompanies, el.tabContentCategories, el.tabContentLibrary, el.tabContentLibraryCategories];
 
     tabBtns.forEach(btn => { if (btn) btn.classList.remove('active'); });
     tabContents.forEach(content => { if (content) content.classList.remove('active'); });
@@ -3776,6 +4405,12 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   if (el.btnTabCategories) {
     el.btnTabCategories.addEventListener('click', () => switchTab(el.btnTabCategories, el.tabContentCategories, renderAdminCategoriesTable));
+  }
+  if (el.btnTabLibrary) {
+    el.btnTabLibrary.addEventListener('click', () => switchTab(el.btnTabLibrary, el.tabContentLibrary, renderAdminLibraryTable));
+  }
+  if (el.btnTabLibraryCategories) {
+    el.btnTabLibraryCategories.addEventListener('click', () => switchTab(el.btnTabLibraryCategories, el.tabContentLibraryCategories, renderAdminLibraryCategoriesTable));
   }
 
   // Initial load of static dropdown parameters

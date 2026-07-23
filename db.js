@@ -85,6 +85,151 @@ const db = {
     return { success: true, message: `Đã xóa phân loại "${cleanName}" thành công.` };
   },
 
+  // --- LIBRARY CATEGORIES CRUD ---
+  async getLibraryCategories() {
+    const { data, error } = await supabaseClient
+      .from('ahcom_library_categories')
+      .select('name')
+      .order('id', { ascending: true });
+    if (error || !data || data.length === 0) {
+      // Fallback default list if table doesn't exist yet
+      return ['Tài liệu Đào tạo', 'Quy trình & Quy chế', 'Sách hướng dẫn', 'Video kỹ năng'];
+    }
+    return data.map(c => c.name);
+  },
+
+  async addLibraryCategory(categoryName) {
+    const cleanName = categoryName.trim();
+    if (!cleanName) return { success: false, message: 'Tên phân loại thư viện không được để trống.' };
+
+    const { error } = await supabaseClient
+      .from('ahcom_library_categories')
+      .insert({ name: cleanName });
+
+    if (error) {
+      if (error.code === '23505') return { success: false, message: 'Phân loại này đã tồn tại.' };
+      return { success: false, message: error.message };
+    }
+    return { success: true, message: `Đã thêm phân loại thư viện "${cleanName}" thành công.` };
+  },
+
+  async updateLibraryCategory(oldName, newName) {
+    const cleanOld = oldName.trim();
+    const cleanNew = newName.trim();
+    if (!cleanNew) return { success: false, message: 'Tên phân loại mới không được để trống.' };
+
+    const { error: catError } = await supabaseClient
+      .from('ahcom_library_categories')
+      .update({ name: cleanNew })
+      .eq('name', cleanOld);
+
+    if (catError && catError.code === '23505') {
+      return { success: false, message: 'Tên phân loại này đã tồn tại.' };
+    }
+
+    // Cascade update category on existing library items
+    await supabaseClient
+      .from('ahcom_library')
+      .update({ category: cleanNew })
+      .eq('category', cleanOld);
+
+    return { success: true, message: `Đã cập nhật tên phân loại thành "${cleanNew}" thành công.` };
+  },
+
+  async deleteLibraryCategory(categoryName) {
+    const cleanName = categoryName.trim();
+
+    // Check if library items are using this category
+    const { data: items } = await supabaseClient
+      .from('ahcom_library')
+      .select('item_id')
+      .eq('category', cleanName)
+      .limit(1);
+
+    if (items && items.length > 0) {
+      return { success: false, message: `Không thể xóa phân loại "${cleanName}" do đang có tài liệu thuộc phân loại này.` };
+    }
+
+    const { error } = await supabaseClient
+      .from('ahcom_library_categories')
+      .delete()
+      .eq('name', cleanName);
+
+    if (error) return { success: false, message: error.message };
+    return { success: true, message: `Đã xóa phân loại thư viện "${cleanName}" thành công.` };
+  },
+
+  // --- LIBRARY ITEMS CRUD ---
+  async getLibraryItems() {
+    const { data, error } = await supabaseClient
+      .from('ahcom_library')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error("Lỗi getLibraryItems: ", error);
+      return [];
+    }
+
+    return data.map(item => {
+      const rawTargetGroup = item.target_group || 'All';
+      const isHidden = rawTargetGroup.startsWith('HIDDEN_') || item.is_hidden === true || String(item.is_hidden) === 'true';
+      const cleanTargetGroup = rawTargetGroup.replace('HIDDEN_', '');
+
+      return {
+        ItemID: item.item_id,
+        Title: item.title,
+        Category: item.category,
+        ContentType: item.content_type,
+        TargetGroup: cleanTargetGroup,
+        ContentURL: item.content_url || '',
+        ThumbnailURL: item.thumbnail_url || '',
+        ScopeCompany: item.scope_company || 'All',
+        ScopeDepartment: item.scope_department || 'All',
+        CreatedByUserId: item.created_by_user_id,
+        IsHidden: isHidden
+      };
+    });
+  },
+
+  async saveLibraryItem(itemData) {
+    const itemId = itemData.ItemID || ('lib_' + Date.now());
+    const baseTargetGroup = itemData.TargetGroup || 'All';
+    const isHidden = !!itemData.IsHidden;
+    const cleanGroup = baseTargetGroup.replace('HIDDEN_', '');
+    const targetGroupVal = isHidden ? ('HIDDEN_' + cleanGroup) : cleanGroup;
+
+    const row = {
+      item_id: itemId,
+      title: itemData.Title,
+      category: itemData.Category,
+      content_type: itemData.ContentType,
+      target_group: targetGroupVal,
+      content_url: itemData.ContentURL || '',
+      thumbnail_url: itemData.ThumbnailURL || '',
+      scope_company: itemData.ScopeCompany || 'All',
+      scope_department: itemData.ScopeDepartment || 'All',
+      created_by_user_id: itemData.CreatedByUserId || null
+    };
+
+    const { error } = await supabaseClient
+      .from('ahcom_library')
+      .upsert(row);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+    itemData.ItemID = itemId;
+    return itemData;
+  },
+
+  async deleteLibraryItem(itemId) {
+    const { error } = await supabaseClient
+      .from('ahcom_library')
+      .delete()
+      .eq('item_id', itemId);
+    if (error) throw new Error(error.message);
+  },
+
   // --- COMPANIES CRUD (NEW) ---
   async getCompanies() {
     const { data, error } = await supabaseClient
