@@ -2550,7 +2550,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (course) {
       // EDIT MODE
-      document.getElementById('course-modal-title').textContent = 'Chỉnh sửa Khóa học AHCOM';
+      document.getElementById('course-modal-title').textContent = 'Chỉnh sửa Khóa học AHCOM [v45]';
       el.editorCourseId.value = course.CourseID;
       el.editorTitle.value = course.Title;
       el.editorCategory.value = course.Category;
@@ -2639,7 +2639,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     } else {
       // ADD NEW MODE
-      document.getElementById('course-modal-title').textContent = 'Thêm Khóa học mới cho AHCOM';
+      document.getElementById('course-modal-title').textContent = 'Thêm Khóa học mới cho AHCOM [v45]';
       el.editorCourseId.value = '';
       el.editorTitle.value = '';
       el.editorCategory.value = 'Sales';
