@@ -3315,162 +3315,166 @@ document.addEventListener('DOMContentLoaded', () => {
   // Handle Course Form Submit
   el.formCourseEditor.addEventListener('submit', async (e) => {
     e.preventDefault();
+    try {
+      const courseId = el.editorCourseId.value || null;
+      const title = el.editorTitle.value.trim();
+      const category = el.editorCategory.value;
+      const contentType = el.editorContentType.value;
+      const targetGroup = el.editorTargetGroup.value;
 
-    const courseId = el.editorCourseId.value || null;
-    const title = el.editorTitle.value.trim();
-    const category = el.editorCategory.value;
-    const contentType = el.editorContentType.value;
-    const targetGroup = el.editorTargetGroup.value;
+      const isHiddenValue = el.editorIsHidden ? el.editorIsHidden.value === 'true' : false;
 
-    const isHiddenValue = el.editorIsHidden ? el.editorIsHidden.value === 'true' : false;
+      const courseData = {
+        CourseID: courseId,
+        Title: title,
+        Category: category,
+        ContentType: contentType,
+        TargetGroup: targetGroup,
+        IsHidden: isHiddenValue,
+        is_hidden: isHiddenValue,
+        ThumbnailURL: state.currentThumbnailBase64,
+        QuizQuestions: [],
+        ScopeCompany: el.editorScopeCompany.value,
+        ScopeDepartment: el.editorScopeDepartment.value,
+        CreatedByUserId: state.currentUser ? state.currentUser.UserID : null
+      };
 
-    const courseData = {
-      CourseID: courseId,
-      Title: title,
-      Category: category,
-      ContentType: contentType,
-      TargetGroup: targetGroup,
-      IsHidden: isHiddenValue,
-      is_hidden: isHiddenValue,
-      ThumbnailURL: state.currentThumbnailBase64,
-      QuizQuestions: [],
-      ScopeCompany: el.editorScopeCompany.value,
-      ScopeDepartment: el.editorScopeDepartment.value,
-      CreatedByUserId: state.currentUser ? state.currentUser.UserID : null
-    };
+      // Gather and validate Video vs Slide contents
+      if (contentType === 'Video') {
+        const videoUrl = el.editorVideoUrl.value.trim();
+        const hasPendingVideo = !!state.pendingVideoFile;
+        const hasExistingLocalVideo = courseId && el.editorVideoFileName.textContent.includes('[Video đã lưu cục bộ]');
 
-    // Gather and validate Video vs Slide contents
-    if (contentType === 'Video') {
-      const videoUrl = el.editorVideoUrl.value.trim();
-      const hasPendingVideo = !!state.pendingVideoFile;
-      const hasExistingLocalVideo = courseId && el.editorVideoFileName.textContent.includes('[Video đã lưu cục bộ]');
-
-      if (!videoUrl && !hasPendingVideo && !hasExistingLocalVideo) {
-        showToast('Vui lòng nhập đường dẫn video hoặc tải file video từ máy tính.', 'danger');
-        return;
-      }
-      
-      if (hasPendingVideo || hasExistingLocalVideo) {
-        courseData.ContentURL = 'local-video';
-      } else {
-        courseData.ContentURL = videoUrl;
-      }
-      courseData.SlideSource = 'manual';
-    } else {
-      let slideSource = el.editorSlideSource.value;
-      const slideUrl = el.editorSlideUrl.value.trim();
-      const slideCards = el.editorSlidesList.querySelectorAll('.editor-item-card');
-      const hasPendingPdf = !!state.pendingPdfFile;
-      const hasExistingLocalPdf = courseId && el.editorPdfFileName && el.editorPdfFileName.textContent.includes('[PDF đã lưu cục bộ]');
-
-      // Smart Fallback: If user uploaded PDF or pasted link
-      if (hasPendingPdf || hasExistingLocalPdf) {
-        slideSource = 'link';
-        el.editorSlideSource.value = 'link';
-      } else if (slideSource === 'manual' && slideCards.length === 0 && slideUrl) {
-        slideSource = 'link';
-        el.editorSlideSource.value = 'link';
-      }
-
-      courseData.SlideSource = slideSource;
-
-      if (slideSource === 'link') {
-        if (!slideUrl && !hasPendingPdf && !hasExistingLocalPdf && !state.pendingPdfBase64) {
-          showToast('Vui lòng nhập đường dẫn tài liệu Slide hoặc tải tệp PDF từ máy tính.', 'danger');
+        if (!videoUrl && !hasPendingVideo && !hasExistingLocalVideo) {
+          showToast('Vui lòng nhập đường dẫn video hoặc tải file video từ máy tính.', 'danger');
           return;
         }
-
-        if (state.pendingPdfBase64) {
-          courseData.ContentURL = state.pendingPdfBase64;
-        } else if (hasPendingPdf || hasExistingLocalPdf) {
-          courseData.ContentURL = 'local-pdf';
+        
+        if (hasPendingVideo || hasExistingLocalVideo) {
+          courseData.ContentURL = 'local-video';
         } else {
-          courseData.ContentURL = slideUrl;
+          courseData.ContentURL = videoUrl;
         }
-        courseData.Slides = [];
+        courseData.SlideSource = 'manual';
       } else {
-        if (slideCards.length === 0) {
-          showToast('Vui lòng bấm nút "+ Thêm trang Slide" (hoặc dán đường dẫn tài liệu ngoài) trước khi lưu.', 'danger');
-          return;
+        let slideSource = el.editorSlideSource.value;
+        const slideUrl = el.editorSlideUrl.value.trim();
+        const slideCards = el.editorSlidesList.querySelectorAll('.editor-item-card');
+        const hasPendingPdf = !!state.pendingPdfFile;
+        const hasExistingLocalPdf = courseId && el.editorPdfFileName && el.editorPdfFileName.textContent.includes('[PDF đã lưu cục bộ]');
+
+        // Smart Fallback: If user uploaded PDF or pasted link
+        if (hasPendingPdf || hasExistingLocalPdf) {
+          slideSource = 'link';
+          el.editorSlideSource.value = 'link';
+        } else if (slideSource === 'manual' && slideCards.length === 0 && slideUrl) {
+          slideSource = 'link';
+          el.editorSlideSource.value = 'link';
         }
 
-        const slides = [];
-        slideCards.forEach(card => {
-          const sTitle = card.querySelector('.slide-title-input').value.trim();
-          const sContent = card.querySelector('.slide-content-input').value.trim();
-          slides.push({ Title: sTitle, Content: sContent });
-        });
-        courseData.Slides = slides;
-        courseData.ContentURL = '';
+        courseData.SlideSource = slideSource;
+
+        if (slideSource === 'link') {
+          if (!slideUrl && !hasPendingPdf && !hasExistingLocalPdf && !state.pendingPdfBase64) {
+            showToast('Vui lòng nhập đường dẫn tài liệu Slide hoặc tải tệp PDF từ máy tính.', 'danger');
+            return;
+          }
+
+          if (state.pendingPdfBase64) {
+            courseData.ContentURL = state.pendingPdfBase64;
+          } else if (hasPendingPdf || hasExistingLocalPdf) {
+            courseData.ContentURL = 'local-pdf';
+          } else {
+            courseData.ContentURL = slideUrl;
+          }
+          courseData.Slides = [];
+        } else {
+          if (slideCards.length === 0) {
+            showToast('Vui lòng bấm nút "+ Thêm trang Slide" (hoặc dán đường dẫn tài liệu ngoài) trước khi lưu.', 'danger');
+            return;
+          }
+
+          const slides = [];
+          slideCards.forEach(card => {
+            const sTitle = card.querySelector('.slide-title-input').value.trim();
+            const sContent = card.querySelector('.slide-content-input').value.trim();
+            slides.push({ Title: sTitle, Content: sContent });
+          });
+          courseData.Slides = slides;
+          courseData.ContentURL = '';
+        }
       }
-    }
 
-    // Gather and validate Quiz Questions
-    const questionCards = el.editorQuestionsList.querySelectorAll('.editor-item-card');
-    if (questionCards.length === 0) {
-      showToast('Vui lòng thêm ít nhất 1 câu hỏi trắc nghiệm kiểm tra.', 'danger');
-      return;
-    }
-
-    const quizQuestions = [];
-    let validationError = false;
-
-    questionCards.forEach(card => {
-      const qText = card.querySelector('.q-text-input').value.trim();
-      const optionInputs = card.querySelectorAll('.q-opt-input');
-      const correctRadio = card.querySelector('input[type="radio"]:checked');
-
-      if (!correctRadio) {
-        validationError = true;
+      // Gather and validate Quiz Questions
+      const questionCards = el.editorQuestionsList.querySelectorAll('.editor-item-card');
+      if (questionCards.length === 0) {
+        showToast('Vui lòng thêm ít nhất 1 câu hỏi trắc nghiệm kiểm tra.', 'danger');
         return;
       }
 
-      const options = Array.from(optionInputs).map(input => input.value.trim());
-      const correctIdx = parseInt(correctRadio.value);
+      const quizQuestions = [];
+      let validationError = false;
 
-      quizQuestions.push({
-        Question: qText,
-        Options: options,
-        CorrectIndex: correctIdx
+      questionCards.forEach(card => {
+        const qText = card.querySelector('.q-text-input').value.trim();
+        const optionInputs = card.querySelectorAll('.q-opt-input');
+        const correctRadio = card.querySelector('input[type="radio"]:checked');
+
+        if (!correctRadio) {
+          validationError = true;
+          return;
+        }
+
+        const options = Array.from(optionInputs).map(input => input.value.trim());
+        const correctIdx = parseInt(correctRadio.value);
+
+        quizQuestions.push({
+          Question: qText,
+          Options: options,
+          CorrectIndex: correctIdx
+        });
       });
-    });
 
-    if (validationError) {
-      showToast('Vui lòng chọn đáp án đúng cho tất cả các câu hỏi.', 'danger');
-      return;
-    }
-
-    courseData.QuizQuestions = quizQuestions;
-
-    // Save to simulated database
-    const saved = await window.ahcomDB.saveCourse(courseData);
-
-    // Save video file to IndexedDB if a new file is pending
-    if (contentType === 'Video' && state.pendingVideoFile) {
-      try {
-        await window.ahcomDB.largeFileStorage.saveVideo(saved.CourseID, state.pendingVideoFile);
-      } catch (err) {
-        console.error("Lỗi khi lưu video cục bộ: ", err);
-        showToast('Lỗi khi lưu tệp tin video vào IndexedDB.', 'danger');
+      if (validationError) {
+        showToast('Vui lòng chọn đáp án đúng cho tất cả các câu hỏi.', 'danger');
+        return;
       }
-    }
 
-    // Save PDF file to IndexedDB if a new PDF file is pending
-    if (state.pendingPdfFile) {
-      try {
-        await window.ahcomDB.largeFileStorage.saveDocument(saved.CourseID, state.pendingPdfFile);
-      } catch (err) {
-        console.error("Lỗi khi lưu PDF cục bộ: ", err);
-        showToast('Lỗi khi lưu tệp tin PDF vào IndexedDB.', 'danger');
+      courseData.QuizQuestions = quizQuestions;
+
+      // Save to simulated database
+      const saved = await window.ahcomDB.saveCourse(courseData);
+
+      // Save video file to IndexedDB if a new file is pending
+      if (contentType === 'Video' && state.pendingVideoFile) {
+        try {
+          await window.ahcomDB.largeFileStorage.saveVideo(saved.CourseID, state.pendingVideoFile);
+        } catch (err) {
+          console.error("Lỗi khi lưu video cục bộ: ", err);
+          showToast('Lỗi khi lưu tệp tin video vào IndexedDB.', 'danger');
+        }
       }
-    }
 
-    showToast(`Đã lưu khóa học "${saved.Title}" thành công!`, 'success');
-    
-    // Refresh panels
-    await renderAdminDashboard();
-    await renderAdminCoursesTable();
-    closeCourseEditorModal();
+      // Save PDF file to IndexedDB if a new PDF file is pending
+      if (state.pendingPdfFile) {
+        try {
+          await window.ahcomDB.largeFileStorage.saveDocument(saved.CourseID, state.pendingPdfFile);
+        } catch (err) {
+          console.error("Lỗi khi lưu PDF cục bộ: ", err);
+          showToast('Lỗi khi lưu tệp tin PDF vào IndexedDB.', 'danger');
+        }
+      }
+
+      showToast(`Đã lưu khóa học "${saved.Title}" thành công!`, 'success');
+      
+      // Refresh panels
+      await renderAdminDashboard();
+      await renderAdminCoursesTable();
+      closeCourseEditorModal();
+    } catch (err) {
+      console.error("Lỗi khi lưu khóa học: ", err);
+      showToast("Lỗi khi lưu khóa học: " + err.message, "danger");
+    }
   });
 
   // --- ADMIN EMPLOYEE WHITELIST MANAGER LOGIC ---
