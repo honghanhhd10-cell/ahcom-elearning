@@ -10,10 +10,10 @@
   <!-- Diagnostic script for core app errors -->
   <script>
     window.addEventListener('error', function(e) {
-      const filename = (e.filename || '').toLowerCase();
-      if (filename.includes('app.js') || filename.includes('db.js')) {
-        alert("Lỗi tải tệp mã nguồn (" + (filename.split('/').pop()) + "): " + e.message);
-      }
+      alert("Lỗi Runtime:\n" + e.message + "\n\nTệp: " + (e.filename || 'unknown') + "\nDòng: " + (e.lineno || '0') + ", Cột: " + (e.colno || '0'));
+    });
+    window.addEventListener('unhandledrejection', function(e) {
+      alert("Lỗi Bất đồng bộ (Promise Rejection):\n" + (e.reason ? (e.reason.message || e.reason) : 'Không có lý do'));
     });
   </script>
 
@@ -21,7 +21,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- Custom Stylesheet -->
-  <link rel="stylesheet" href="styles.css?v=43">
+  <link rel="stylesheet" href="styles.css?v=44">
 </head>
 <body>
 
@@ -1301,10 +1301,10 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <!-- Relational Local Database Layer -->
-  <script src="db.js?v=43"></script>
+  <script src="db.js?v=44"></script>
   
   <!-- Interactive Client-side App Core -->
-  <script src="app.js?v=43"></script>
+  <script src="app.js?v=44"></script>
 
 </body>
 </html>
